@@ -1,0 +1,207 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Montserrat', 'Gill Sans', sans-serif !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  background-color: var(--clr-white);
+  color: var(--clr-dark);
+}
+
+main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  color: var(--clr-primary);
+}
+
+i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding-left: 2px;
+  text-transform: uppercase;
+}
+
+p {
+  color: var(--clr-dark2);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+/* =============================================
+   FLEX HELPERS
+   ============================================= */
+
+.flex-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+
+/* =============================================
+   SECTIONS & FOOTER
+   ============================================= */
+
+section,
+footer {
+  padding: 50px 20px;
+  gap: 18px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+section>*,
+footer>* {
+  max-width: 900px;
+}
+
+/* =============================================
+   BOTONES
+   ============================================= */
+
+a.boton,
+.button1 {
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 13px;
+  border: none;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.button1 {
+  background-color: var(--clr-accent);
+  color: var(--clr-white);
+}
+
+.button2 {
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition);
+  text-transform: uppercase;
+  border-radius: 12px;
+  border: solid 1px var(--clr-gray);
+  background-color: var(--clr-white);
+  letter-spacing: 1px;
+}
+
+.button2.active {
+  background-color: var(--clr-primary);
+  color: var(--clr-white);
+  border-color: var(--clr-primary);
+}
+
+/* =============================================
+   ANIMACIONES GENÉRICAS
+   ============================================= */
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0px);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* =============================================
+   HOVER & RESPONSIVE
+   ============================================= */
+
+@media (hover: hover) {
+  .button1:hover {
+    background-color: color-mix(in oklch, var(--clr-accent) 75%, black);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .button2:hover {
+    background-color: var(--clr-primary);
+    color: var(--clr-white);
+    border-color: var(--clr-primary);
+  }
+}
+
+@media (min-width: 750px) {
+  h1 {
+    font-size: 2rem;
+  }
+}

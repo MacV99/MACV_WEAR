@@ -1,0 +1,49 @@
+<section class="flex-column">
+  <h1>Tu Empresa</h1>
+  <p>Breve descripción del negocio o propuesta de valor.</p>
+  <div class="buttons flex-row">
+    <a class="boton button1" href="#contacto">Contáctanos</a>
+    <a class="boton2 button2" href="#servicios">Saber Más</a>
+  </div>
+</section>
+
+<style>
+  section {
+    text-align: center;
+    background-color: var(--clr-primary-light);
+    background-image: radial-gradient(
+      circle,
+      rgba(var(--rgb-primary), 0.15) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    border-bottom: solid 1px var(--border-soft);
+    height: 300px;
+    gap: 8px;
+  }
+
+  h1 {
+    font-size: 2.8rem;
+    line-height: normal;
+    font-weight: 100;
+    letter-spacing: 18px;
+    padding-left: 18px;
+    color: var(--clr-primary);
+  }
+
+  p {
+    color: var(--clr-dark2);
+    font-size: 0.95rem;
+  }
+
+  .buttons {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  @media (min-width: 750px) {
+    h1 {
+      font-size: 5rem;
+    }
+  }
+</style>

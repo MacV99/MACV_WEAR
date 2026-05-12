@@ -1,0 +1,54 @@
+---
+import Navbar from "../components/navbar.astro";
+---
+
+<header class="flex-row">
+  <a href="/" aria-label="Inicio">
+    <img src="/img/logo-png-mini.avif" alt="Logo" class="logo" />
+  </a>
+  <Navbar />
+</header>
+
+<style>
+  header {
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 10px;
+    background: var(--header-bg-mobile);
+    box-shadow: var(--shadow-md);
+    border-radius: 20px;
+    width: 95%;
+    height: 80px;
+    margin: 10px auto;
+    padding: 12px;
+    transition: var(--transition);
+    z-index: 100;
+  }
+
+  header a {
+    height: 100%;
+    margin-right: auto;
+    display: flex;
+  }
+
+  .logo {
+    height: 100%;
+    width: auto;
+    border-radius: 12px;
+  }
+
+  @media (min-width: 750px) {
+    header {
+      background: var(--header-bg-desktop);
+      backdrop-filter: blur(5px);
+      width: 98%;
+    }
+  }
+
+  @media (hover: hover) {
+    header:hover {
+      background-color: var(--clr-white);
+    }
+  }
+</style>

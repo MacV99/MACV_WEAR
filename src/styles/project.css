@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* ── PALETA DEL PROYECTO ── */
+  --clr-primary: #363636;
+  --clr-primary-mid: color-mix(in oklch, var(--clr-primary) 90%, white);
+  --clr-primary-light: color-mix(in oklch, var(--clr-primary) 8%, white);
+
+  --clr-accent: #487e69;
+
+  --clr-green: #2b9348;
+  --clr-green2: color-mix(in oklch, var(--clr-green) 75%, black);
+
+  --clr-danger: #e11d48;
+
+  /* ── NEUTROS ── */
+  --clr-dark: #191919;
+  --clr-dark2: #464646;
+  --clr-gray: #dcdcdc;
+  --clr-white: #f4f4f4;
+
+  --transition: all 0.2s ease;
+
+  /* ── CANALES RGB DEL PROYECTO ── */
+  --rgb-primary: 26, 26, 26;
+  --rgb-accent: 154, 0, 181;
+  --rgb-green: 43, 147, 72;
+
+  /* ── SOMBRAS CON PRIMARIO DEL PROYECTO ── */
+  --shadow-sm: 0 2px 8px rgba(var(--rgb-primary), 0.08);
+  --shadow-md: 0 4px 20px rgba(var(--rgb-primary), 0.12);
+  --shadow-lg: 0 8px 40px rgba(var(--rgb-primary), 0.18);
+
+  /* ── MODALES ── */
+  --clr-modal-aviso: #fef9c3;
+  --clr-modal-error: #fee2e2;
+  --clr-modal-exito: #dcfce7;
+  --clr-modal-carga: #e0f2fe;
+
+  /* ── OVERLAYS ── */
+  --modal-backdrop: rgba(15, 23, 42, 0.38);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* ── HEADER ── */
+  --header-bg-mobile: rgba(255, 255, 255, 0.95);
+  --header-bg-desktop: rgba(255, 255, 255, 0.6);
+
+  /* ── HERO ── */
+  --hero-overlay: rgba(var(--rgb-primary), 0.72);
+
+  /* ── FOOTER ── */
+  --footer-hover-bg: rgba(255, 255, 255, 0.07);
+
+  /* ── BORDES ── */
+  --border-soft: rgba(var(--rgb-primary), 0.1);
+  --border-hover: rgba(var(--rgb-primary), 0.22);
+
+  /* ── FONDOS Y OVERLAYS ── */
+  --bg-subtle: rgba(var(--rgb-primary), 0.06);
+  --overlay-card: rgba(var(--rgb-primary), 0.88);
+
+  /* ── FOCUS RING ── */
+  --focus-ring: 0 0 0 3px rgba(var(--rgb-primary), 0.08);
+}
