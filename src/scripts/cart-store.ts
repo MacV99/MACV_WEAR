@@ -2,9 +2,12 @@ export interface CartItem {
   id: string;
   slug: string;
   name: string;
+  brand?: string;
   color: string;
   colorName: string;
   colorHex: string;
+  colorGradient: string;
+  image?: string;
   size: string;
   price: number;
   qty: number;
@@ -28,7 +31,7 @@ function save(items: CartItem[]) {
 }
 
 function makeId(item: Omit<CartItem, 'id' | 'qty'>): string {
-  return `${item.slug}__${item.color}__${item.size}`;
+  return `${item.slug}__${item.brand ?? ''}__${item.color}__${item.size}`;
 }
 
 export const MacVCart = {

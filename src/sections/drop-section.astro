@@ -1,8 +1,4 @@
 ---
-import { products } from '../data/products';
-import ProductCard from '../components/product-card.astro';
-
-const dropProducts = products.filter(p => p.drop === 'Drop 03');
 ---
 
 <section class="drop-section">
@@ -10,7 +6,7 @@ const dropProducts = products.filter(p => p.drop === 'Drop 03');
     <div class="drop-header flex-row">
       <div class="flex-column drop-header-left">
         <span class="eyebrow">Edición limitada</span>
-        <h2 class="drop-title">Drop 03</h2>
+        <h2 class="drop-title">Lo nuevo</h2>
       </div>
       <div class="drop-urgency flex-row">
         <span class="urgency-dot" aria-hidden="true"></span>
@@ -18,11 +14,9 @@ const dropProducts = products.filter(p => p.drop === 'Drop 03');
       </div>
     </div>
     <p class="drop-description">
-      Dos colores de temporada, cantidad limitada. Una vez que se acaben, no vuelven.
+      Los más recientes. Una vez que se acaben, no vuelven.
     </p>
-    <div class="drop-grid">
-      {dropProducts.map(p => <ProductCard product={p} />)}
-    </div>
+    <div id="drop-grid" class="drop-grid"></div>
   </div>
 </section>
 
@@ -94,6 +88,7 @@ const dropProducts = products.filter(p => p.drop === 'Drop 03');
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+    min-height: 200px;
   }
 
   @keyframes pulse {
@@ -107,3 +102,8 @@ const dropProducts = products.filter(p => p.drop === 'Drop 03');
     }
   }
 </style>
+
+<script>
+  import { initDropCards } from '../scripts/sheet-products.ts';
+  initDropCards('drop-grid', 2);
+</script>

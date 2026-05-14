@@ -519,14 +519,15 @@ const related = products.filter(p => p.slug !== product.slug && p.featured).slic
     if (!selectedSize) return;
     const c = colors[selectedColorIdx];
     window.MacVCart.add({
-      slug:      product.slug,
-      name:      product.name,
-      color:     c.id,
-      colorName: c.name,
-      colorHex:  c.hex,
-      size:      selectedSize,
-      price:     product.price,
-      qty:       parseInt(qtyInput.value) || 1,
+      slug:          product.slug,
+      name:          product.name,
+      color:         c.id,
+      colorName:     c.name,
+      colorHex:      c.hex,
+      colorGradient: c.gradientCss,
+      size:          selectedSize,
+      price:         product.price,
+      qty:           parseInt(qtyInput.value) || 1,
     });
     window.MacVCart.open();
   });

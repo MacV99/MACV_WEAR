@@ -1,8 +1,4 @@
 ---
-import { products } from '../data/products';
-import ProductCard from '../components/product-card.astro';
-
-const featured = products.filter(p => p.featured);
 ---
 
 <section class="product-grid-section">
@@ -14,9 +10,7 @@ const featured = products.filter(p => p.featured);
       </div>
       <a href="/tienda" class="btn ghost sm">Ver todo</a>
     </div>
-    <div class="product-grid">
-      {featured.map(p => <ProductCard product={p} />)}
-    </div>
+    <div id="home-grid" class="product-grid"></div>
     <div class="grid-footer flex-row">
       <a href="/tienda" class="btn">Ver colección completa</a>
     </div>
@@ -61,6 +55,7 @@ const featured = products.filter(p => p.featured);
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+    min-height: 200px;
   }
 
   .grid-footer {
@@ -75,3 +70,8 @@ const featured = products.filter(p => p.featured);
     }
   }
 </style>
+
+<script>
+  import { initHomeCards } from '../scripts/sheet-products.ts';
+  initHomeCards('home-grid', 4);
+</script>

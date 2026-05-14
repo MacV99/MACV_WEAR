@@ -5,6 +5,8 @@
   font-family: var(--font-body, 'Archivo', sans-serif);
 }
 
+[hidden] { display: none !important; }
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 64px;
