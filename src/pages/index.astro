@@ -1,77 +1,16 @@
 ---
-import Layout1 from "../layouts/Layout1.astro";
-
-import Hero from "../sections/hero.astro";
-import MisionVision from "../components/mision-vision.astro";
+import Layout1 from '../layouts/Layout1.astro';
+import Hero from '../sections/hero.astro';
+import FeaturesStrip from '../sections/features-strip.astro';
+import ProductGridHome from '../sections/product-grid-home.astro';
+import Editorial from '../sections/editorial.astro';
+import DropSection from '../sections/drop-section.astro';
 ---
 
-<Layout1 title="Tu Empresa">
-	<Hero />
-
-	<section id="puntos">
-		<div class="flex-row puntos-grid">
-			<div>
-				<i class="bi bi-check-circle-fill"></i>
-				<p>Característica 1</p>
-			</div>
-			<div>
-				<i class="bi bi-check-circle-fill"></i>
-				<p>Característica 2</p>
-			</div>
-			<div>
-				<i class="bi bi-check-circle-fill"></i>
-				<p>Característica 3</p>
-			</div>
-			<div>
-				<i class="bi bi-check-circle-fill"></i>
-				<p>Característica 4</p>
-			</div>
-			<div>
-				<i class="bi bi-check-circle-fill"></i>
-				<p>Característica 5</p>
-			</div>
-		</div>
-	</section>
-
-	<MisionVision />
+<Layout1 title="MacV Wear — Ropa interior masculina premium">
+  <Hero />
+  <FeaturesStrip />
+  <ProductGridHome />
+  <Editorial />
+  <DropSection />
 </Layout1>
-
-<style>
-	#puntos > div.puntos-grid {
-		flex-wrap: wrap;
-		gap: 10px;
-		justify-content: center;
-	}
-
-	#puntos > div > div {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		max-width: fit-content;
-		padding: 10px 15px;
-		background-color: var(--clr-primary-light);
-		background-image: radial-gradient(circle, rgba(var(--rgb-primary), 0.15) 1px, transparent 1px);
-		background-size: 22px 22px;
-		border: solid 1px var(--border-soft);
-		border-radius: 15px;
-		gap: 10px;
-		transition: var(--transition);
-	}
-
-	#puntos .bi {
-		font-size: 1.4rem;
-		color: var(--clr-accent);
-		transition: var(--transition);
-	}
-
-	@media (hover: hover) {
-		#puntos > div > div:hover {
-			border-color: var(--border-hover);
-			background-color: var(--clr-primary-light);
-		}
-
-		#puntos > div > div:hover p {
-			color: var(--clr-primary);
-		}
-	}
-</style>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Product Card</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .card { padding: 18px 22px; gap: 12px; justify-content: center; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pc { background: var(--bone-50); border: 1.5px solid var(--carbon-900); display: flex; flex-direction: column; }
+  .pc .img {
+    aspect-ratio: 1 / 1.05;
+    background: repeating-linear-gradient(135deg, #2A2620 0 12px, #1F1D1A 12px 24px);
+    position: relative;
+  }
+  .pc .badge {
+    position: absolute; top: 8px; left: 8px;
+    font-family: var(--font-mono); font-weight: 700; font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    background: var(--blood-600); color: var(--bone-50);
+    padding: 4px 7px; border-radius: 2px;
+  }
+  .pc .meta { padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; }
+  .pc .name { font-family: var(--font-body); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pc .price { font-family: var(--font-display-alt); font-weight: 900; font-size: 14px; }
+  .pc.alt .img { background: repeating-linear-gradient(135deg, #EBE3D2 0 12px, #D9CFB9 12px 24px); }
+</style>
+</head>
+<body>
+<div class="card tight">
+  <div class="grid">
+    <div class="pc">
+      <div class="img"><div class="badge">Drop 03</div></div>
+      <div class="meta"><div class="name">Bóxer Pima</div><div class="price">$24.900</div></div>
+    </div>
+    <div class="pc alt">
+      <div class="img"></div>
+      <div class="meta"><div class="name">Trunk Lino</div><div class="price">$28.900</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

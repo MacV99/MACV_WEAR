@@ -1,0 +1,84 @@
+---
+const features = [
+  { icon: 'bi-truck',        label: 'Envío gratis',    detail: 'En compras sobre $80.000' },
+  { icon: 'bi-shield-check', label: 'Calidad garantizada', detail: 'Algodón pima certificado' },
+  { icon: 'bi-arrow-repeat', label: 'Cambios fáciles', detail: '30 días sin preguntas' },
+];
+---
+
+<section class="features-strip">
+  <div class="container features-inner flex-row">
+    {features.map(f => (
+      <div class="feature-item flex-row">
+        <i class={`bi ${f.icon} feature-icon`} aria-hidden="true"></i>
+        <div class="feature-text flex-column">
+          <span class="feature-label">{f.label}</span>
+          <span class="feature-detail">{f.detail}</span>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .features-strip {
+    background: var(--bone-200);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+  }
+
+  .features-inner {
+    flex-wrap: wrap;
+    gap: 0;
+    justify-content: stretch;
+  }
+
+  .feature-item {
+    flex: 1;
+    min-width: 200px;
+    gap: 12px;
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    justify-content: flex-start;
+  }
+
+  .feature-item:last-child {
+    border-right: none;
+  }
+
+  .feature-icon {
+    font-size: 20px;
+    color: var(--carbon-500);
+    flex-shrink: 0;
+  }
+
+  .feature-text {
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .feature-label {
+    font-family: var(--font-display-alt);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--carbon-900);
+  }
+
+  .feature-detail {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--carbon-300);
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 750px) {
+    .feature-item {
+      min-width: 0;
+      justify-content: center;
+    }
+  }
+</style>

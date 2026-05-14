@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MACV WEAR — Storefront</title>
+<link rel="stylesheet" href="store.css" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+// === Catalog ===
+const products = [
+  { id: 'pima-negro',  name: 'Bóxer Pima',         price: 24900, color: 'k', colors: ['#1F1D1A','#EBE3D2','#5A5A2E'], badge: 'Drop 03', collection: 'Esenciales · Drop 03' },
+  { id: 'pima-crema',  name: 'Bóxer Pima',         price: 24900, color: 'b', colors: ['#EBE3D2','#1F1D1A','#5A5A2E'], badge: null,      collection: 'Esenciales' },
+  { id: 'trunk-olivo', name: 'Trunk Lino',         price: 28900, color: 'o', colors: ['#5A5A2E','#1F1D1A'],            badge: 'Nuevo',   collection: 'Lino · Verano' },
+  { id: 'pack-3',      name: 'Pack Esenciales 3x', price: 69900, color: 'k', colors: ['#1F1D1A','#EBE3D2','#5A5A2E'], badge: '2x1',     collection: 'Packs', desc: 'Tres bóxers Pima a tu elección de color y talla. Ahorra 15% sobre el precio individual.', outOfStock: ['XS'] },
+  { id: 'pima-rojo',   name: 'Bóxer Pima',         price: 26900, color: 'r', colors: ['#B0291F','#1F1D1A'],            badge: 'SALE',    collection: 'Drop 03 · Limitado', outOfStock: ['XS','XL'] },
+  { id: 'trunk-negro', name: 'Trunk Pima',         price: 26900, color: 'k', colors: ['#1F1D1A','#EBE3D2'],            badge: null,      collection: 'Esenciales' },
+  { id: 'long-negro',  name: 'Long Bóxer',         price: 29900, color: 'k', colors: ['#1F1D1A','#5A5A2E'],            badge: null,      collection: 'Sport' },
+  { id: 'pima-olivo',  name: 'Bóxer Pima',         price: 24900, color: 'o', colors: ['#5A5A2E','#1F1D1A','#EBE3D2'], badge: 'Drop 03', collection: 'Drop 03 · Limitado' },
+];
+
+// === Store (in-memory state) ===
+const useGlobal = (initial) => {
+  const [v, setV] = React.useState(initial);
+  return [v, setV];
+};
+
+let _setView, _setCart, _setCartOpen;
+
+const App = () => {
+  const [view, setView] = React.useState({ name: 'home' });
+  const [cart, setCart] = React.useState([]);
+  const [cartOpen, setCartOpen] = React.useState(false);
+
+  _setView = setView; _setCart = setCart; _setCartOpen = setCartOpen;
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [view]);
+
+  // expose API
+  window.MW = {
+    products,
+    go: (name, payload) => setView({ name, payload }),
+    toggleCart: (force) => setCartOpen(o => typeof force === 'boolean' ? force : !o),
+    addToCart: (item) => {
+      setCart(c => {
+        const key = `${item.id}-${item.color}-${item.size}`;
+        const existing = c.find(x => `${x.id}-${x.color}-${x.size}` === key);
+        if (existing) return c.map(x => x === existing ? { ...x, qty: x.qty + (item.qty || 1) } : x);
+        return [...c, { ...item, qty: item.qty || 1 }];
+      });
+      setCartOpen(true);
+    },
+    updateQty: (idx, q) => setCart(c => q < 1 ? c.filter((_, i) => i !== idx) : c.map((x, i) => i === idx ? { ...x, qty: q } : x)),
+    removeFromCart: (idx) => setCart(c => c.filter((_, i) => i !== idx)),
+    useCart: () => cart,
+    useCartOpen: () => cartOpen,
+  };
+
+  let page = null;
+  if (view.name === 'home') page = <HomePage />;
+  else if (view.name === 'shop') page = <ShopPage />;
+  else if (view.name === 'product') page = <PDP productId={view.payload} />;
+  else if (view.name === 'account') page = <AccountPage />;
+
+  return (
+    <div className="app">
+      <TopBar />
+      <main>{page}</main>
+      <Footer />
+      <CartDrawer />
+    </div>
+  );
+};
+
+window.__bootApp = () => ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<script type="text/babel" src="Atoms.jsx"></script>
+<script type="text/babel" src="Chrome.jsx"></script>
+<script type="text/babel" src="ProductCard.jsx"></script>
+<script type="text/babel" src="HomePage.jsx"></script>
+<script type="text/babel" src="PDP.jsx"></script>
+<script type="text/babel" src="Cart.jsx"></script>
+<script type="text/babel">
+  // Boot after all components are defined
+  window.__bootApp();
+</script>
+</body>
+</html>

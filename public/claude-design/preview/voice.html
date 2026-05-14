@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Voice & Copy</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .card { padding: 18px 22px; gap: 10px; justify-content: center; }
+  .row { display: grid; grid-template-columns: 90px 1fr; gap: 14px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .lab { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); letter-spacing: 0.16em; text-transform: uppercase; }
+  .head { font-family: var(--font-display); font-size: 22px; line-height: 1; text-transform: uppercase; }
+  .body { font-family: var(--font-body); font-size: 13px; }
+  .cta { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .tag { font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blood-600); }
+</style>
+</head>
+<body>
+<div class="card tight">
+  <div class="row"><div class="lab">Hero</div><div class="head">Bóxers que no te fallan.</div></div>
+  <div class="row"><div class="lab">Sub</div><div class="body">Algodón pima, costuras planas, fit que aguanta el día.</div></div>
+  <div class="row"><div class="lab">CTA</div><div class="cta">Comprar · Añadir al pack · Ver colección</div></div>
+  <div class="row"><div class="lab">Sale tag</div><div class="tag">2x1 · Últimos días</div></div>
+  <div class="row"><div class="lab">Empty</div><div class="body">Aún no llevas nada. Cámbialo.</div></div>
+</div>
+</body>
+</html>

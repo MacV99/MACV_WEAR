@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Carbon Scale</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .card { padding: 22px 26px; }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 1; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { aspect-ratio: 1; border: 1px solid var(--border); }
+  .name { font-family: var(--font-display-alt); font-size: 13px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">Carbon · ink</div>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#0A0908"></div><div class="name">900</div><div class="hex">#0A0908</div></div>
+    <div class="sw"><div class="chip" style="background:#141311"></div><div class="name">800</div><div class="hex">#141311</div></div>
+    <div class="sw"><div class="chip" style="background:#1F1D1A"></div><div class="name">700</div><div class="hex">#1F1D1A</div></div>
+    <div class="sw"><div class="chip" style="background:#3A3631"></div><div class="name">500</div><div class="hex">#3A3631</div></div>
+    <div class="sw"><div class="chip" style="background:#6B655C"></div><div class="name">300</div><div class="hex">#6B655C</div></div>
+  </div>
+</div>
+</body>
+</html>

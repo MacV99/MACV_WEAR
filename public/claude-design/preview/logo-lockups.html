@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Logo — Lockups</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .card { justify-content: center; padding: 18px 22px; gap: 14px; }
+  .row { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; align-items: stretch; }
+  .tile { border: 1px solid var(--border); padding: 12px; display: flex; align-items: center; justify-content: center; min-height: 110px; }
+  .tile.carbon { background: var(--carbon-900); }
+  .tile img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .tile.carbon img { filter: invert(1); }
+  .label { text-align: center; }
+</style>
+</head>
+<body>
+<div class="card tight">
+  <div class="row">
+    <div class="col">
+      <div class="tile"><img src="../assets/logo-horizontal.png" alt="Horizontal" /></div>
+      <div class="label">Horizontal lockup</div>
+    </div>
+    <div class="col">
+      <div class="tile carbon"><img src="../assets/logo-stamp.png" alt="Stacked inverted" /></div>
+      <div class="label">Stacked, inverted</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

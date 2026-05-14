@@ -1,0 +1,115 @@
+---
+---
+
+<section class="editorial-section">
+  <div class="container editorial-inner">
+    <div class="editorial-text flex-column">
+      <span class="eyebrow">Nuestra filosofía</span>
+      <h2 class="editorial-title">Menos es más.<br />Pero tiene que ser bueno.</h2>
+      <p class="editorial-body">
+        Diseñamos ropa interior para hombres que no quieren pensar en ropa interior.
+        Sin adornos innecesarios, sin marcas llamativas. Solo algodón pima de primera calidad,
+        cortes que no se mueven y una durabilidad que justifica cada peso.
+      </p>
+      <ul class="editorial-points flex-column">
+        <li class="flex-row"><i class="bi bi-check2"></i> Algodón pima 100% peruano</li>
+        <li class="flex-row"><i class="bi bi-check2"></i> Sin costuras internas irritantes</li>
+        <li class="flex-row"><i class="bi bi-check2"></i> Elástico de alta durabilidad</li>
+        <li class="flex-row"><i class="bi bi-check2"></i> Lavable a máquina, retiene la forma</li>
+      </ul>
+    </div>
+    <div class="editorial-visual" aria-hidden="true">
+      <div class="visual-block"></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .editorial-section {
+    background: var(--bone-50);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 0;
+  }
+
+  .editorial-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .editorial-text {
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  .editorial-title {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 0.95;
+    text-transform: uppercase;
+    color: var(--carbon-900);
+    letter-spacing: -0.01em;
+  }
+
+  .editorial-body {
+    font-size: 15px;
+    color: var(--carbon-500);
+    line-height: 1.7;
+    max-width: 480px;
+  }
+
+  .editorial-points {
+    align-items: flex-start;
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+  }
+
+  .editorial-points li {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--carbon-700);
+    gap: 10px;
+    justify-content: flex-start;
+  }
+
+  .editorial-points .bi-check2 {
+    color: var(--carbon-900);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .editorial-visual {
+    display: none;
+  }
+
+  .visual-block {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #2A2620 25%, #1F1D1A 25%, #1F1D1A 50%, #2A2620 50%, #2A2620 75%, #1F1D1A 75%);
+    background-size: 36px 36px;
+    border: 2px solid var(--carbon-900);
+    box-shadow: var(--shadow-press);
+  }
+
+  @media (min-width: 750px) {
+    .editorial-inner {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .editorial-visual {
+      display: block;
+    }
+  }
+</style>

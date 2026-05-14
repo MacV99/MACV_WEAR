@@ -1,49 +1,149 @@
-<section class="flex-column">
-  <h1>Tu Empresa</h1>
-  <p>Breve descripción del negocio o propuesta de valor.</p>
-  <div class="buttons flex-row">
-    <a class="boton button1" href="#contacto">Contáctanos</a>
-    <a class="boton2 button2" href="#servicios">Saber Más</a>
+---
+---
+
+<section class="hero-section">
+  <div class="container hero-inner">
+
+    <div class="hero-text">
+      <span class="hero-eyebrow">Drop 03 · Edición Limitada</span>
+      <h1 class="hero-title">Bóxers<br />que no te<br />fallan.</h1>
+      <p class="hero-subtitle">Algodón pima 100%, costuras planas, elástico jacquard.<br />Fit honesto que aguanta el día.</p>
+      <div class="hero-actions flex-row">
+        <a href="/producto/boxer-pima-oliva" class="hero-btn">Comprar Drop 03</a>
+        <a href="/tienda" class="hero-btn outlined">Ver colección</a>
+      </div>
+    </div>
+
+    <div class="hero-product">
+      <span class="badge blood hero-badge">Nuevo</span>
+      <img src="/img/logo-stamp.avif" alt="MacV Wear stamp" class="stamp-img" />
+    </div>
+
   </div>
 </section>
 
 <style>
-  section {
-    text-align: center;
-    background-color: var(--clr-primary-light);
-    background-image: radial-gradient(
-      circle,
-      rgba(var(--rgb-primary), 0.15) 1px,
-      transparent 1px
-    );
-    background-size: 22px 22px;
-    border-bottom: solid 1px var(--border-soft);
-    height: 300px;
-    gap: 8px;
+  .hero-section {
+    background: var(--carbon-900);
+    padding: 80px 0 80px;
+    border-bottom: 2px solid var(--carbon-800);
   }
 
-  h1 {
-    font-size: 2.8rem;
-    line-height: normal;
-    font-weight: 100;
-    letter-spacing: 18px;
-    padding-left: 18px;
-    color: var(--clr-primary);
+  .hero-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
   }
 
-  p {
-    color: var(--clr-dark2);
-    font-size: 0.95rem;
+  /* ── Texto ── */
+  .hero-text {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 
-  .buttons {
-    gap: 10px;
-    margin-top: 6px;
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--blood-600);
+  }
+
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(64px, 10vw, 132px);
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--bone-50);
+  }
+
+  .hero-subtitle {
+    font-size: 15px;
+    color: var(--bone-400);
+    line-height: 1.65;
+  }
+
+  /* ── Botones ── */
+  .hero-actions {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .hero-btn {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    background: transparent;
+    color: var(--bone-50);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .hero-btn.outlined {
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* ── Imagen producto ── */
+  .hero-product {
+    position: relative;
+    display: none;
+    aspect-ratio: 1;
+    max-width: 460px;
+    background: var(--bone-100);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1;
+  }
+
+  .stamp-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 32px;
+  }
+
+  @media (hover: hover) {
+    .hero-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .hero-btn.outlined:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--bone-50);
+    }
   }
 
   @media (min-width: 750px) {
-    h1 {
-      font-size: 5rem;
+    .hero-section {
+      padding: 96px 0 88px;
+    }
+
+    .hero-inner {
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 56px;
+    }
+
+    .hero-product {
+      display: block;
     }
   }
 </style>

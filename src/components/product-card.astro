@@ -1,0 +1,132 @@
+---
+import type { Product } from '../data/products';
+
+interface Props {
+  product: Product;
+}
+
+const { product } = Astro.props;
+const mainColor = product.colors[0];
+
+const badgeClass: Record<string, string> = {
+  new:     '',
+  sale:    'blood',
+  limited: 'olive',
+};
+---
+
+<a href={`/producto/${product.slug}`} class="product-card" aria-label={product.name}>
+  <div class="card-image" style={`background: ${mainColor.gradientCss}`}>
+    {product.badge && (
+      <span class={`badge ${badgeClass[product.badge] ?? ''}`}>
+        {product.badgeLabel ?? product.badge}
+      </span>
+    )}
+    <div class="color-dots flex-row">
+      {product.colors.map(c => (
+        <span
+          class="color-dot"
+          style={`background: ${c.hex}`}
+          title={c.name}
+          aria-hidden="true"
+        ></span>
+      ))}
+    </div>
+  </div>
+  <div class="card-info">
+    <div class="card-meta flex-row">
+      <span class="card-name">{product.name}</span>
+      <span class="card-price">${product.price.toLocaleString('es-CO')}</span>
+    </div>
+    <span class="card-subtitle">{product.subtitle}</span>
+  </div>
+</a>
+
+<style>
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid var(--carbon-900);
+    color: var(--carbon-900);
+    transition: var(--transition);
+    text-decoration: none;
+  }
+
+  .card-image {
+    position: relative;
+    aspect-ratio: 1 / 1.05;
+    overflow: hidden;
+  }
+
+  .badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1;
+  }
+
+  .color-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    gap: 5px;
+    justify-content: flex-start;
+  }
+
+  .color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+  }
+
+  .card-info {
+    padding: 12px 14px;
+    border-top: 1.5px solid var(--carbon-900);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-meta {
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .card-name {
+    font-family: var(--font-display-alt);
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--carbon-900);
+  }
+
+  .card-price {
+    font-family: var(--font-display-alt);
+    font-size: 14px;
+    color: var(--carbon-900);
+    flex-shrink: 0;
+  }
+
+  .card-subtitle {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  @media (hover: hover) {
+    .product-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+
+    .product-card:hover .card-name {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+</style>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Bone Scale</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .card { padding: 22px 26px; }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; flex: 1; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { aspect-ratio: 1; border: 1px solid var(--border); }
+  .name { font-family: var(--font-display-alt); font-size: 13px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">Bone · paper</div>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#FBF8F2"></div><div class="name">50</div><div class="hex">#FBF8F2</div></div>
+    <div class="sw"><div class="chip" style="background:#F5EFE4"></div><div class="name">100</div><div class="hex">#F5EFE4</div></div>
+    <div class="sw"><div class="chip" style="background:#EBE3D2"></div><div class="name">200</div><div class="hex">#EBE3D2</div></div>
+    <div class="sw"><div class="chip" style="background:#D9CFB9"></div><div class="name">300</div><div class="hex">#D9CFB9</div></div>
+    <div class="sw"><div class="chip" style="background:#B8AC92"></div><div class="name">400</div><div class="hex">#B8AC92</div></div>
+  </div>
+</div>
+</body>
+</html>

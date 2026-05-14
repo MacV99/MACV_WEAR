@@ -1,64 +1,86 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Archivo:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap');
 
 :root {
-  /* ── PALETA DEL PROYECTO ── */
-  --clr-primary: #363636;
-  --clr-primary-mid: color-mix(in oklch, var(--clr-primary) 90%, white);
-  --clr-primary-light: color-mix(in oklch, var(--clr-primary) 8%, white);
+  /* ── TIPOGRAFÍA ── */
+  --font-display:     'Anton', sans-serif;
+  --font-display-alt: 'Archivo Black', sans-serif;
+  --font-body:        'Archivo', sans-serif;
+  --font-mono:        'JetBrains Mono', monospace;
 
-  --clr-accent: #487e69;
+  /* ── BONE SCALE (claro) ── */
+  --bone-50:  #FBF8F2;
+  --bone-100: #F5EFE4;
+  --bone-200: #EBE3D2;
+  --bone-300: #D9CFB9;
+  --bone-400: #B8AC92;
 
-  --clr-green: #2b9348;
-  --clr-green2: color-mix(in oklch, var(--clr-green) 75%, black);
+  /* ── CARBON SCALE (oscuro) ── */
+  --carbon-900: #0A0908;
+  --carbon-800: #141311;
+  --carbon-700: #1F1D1A;
+  --carbon-500: #3A3631;
+  --carbon-300: #6B655C;
 
-  --clr-danger: #e11d48;
+  /* ── ACCENTS ── */
+  --blood-600: #B0291F;
+  --blood-700: #8C1E16;
+  --olive-600: #5A5A2E;
+  --olive-700: #3F3F1F;
 
-  /* ── NEUTROS ── */
-  --clr-dark: #191919;
-  --clr-dark2: #464646;
-  --clr-gray: #dcdcdc;
-  --clr-white: #f4f4f4;
+  /* ── SEMÁNTICOS ── */
+  --bg:            var(--bone-100);
+  --fg:            var(--carbon-900);
+  --fg-muted:      var(--carbon-500);
+  --border:        rgba(10, 9, 8, 0.14);
+  --border-strong: var(--carbon-900);
 
-  --transition: all 0.2s ease;
+  /* ── SOMBRAS (letterpress — sin blur) ── */
+  --shadow-press: 4px 4px 0 var(--carbon-900);
+  --shadow-sm:    0 1px 0 rgba(10, 9, 8, 0.08), 0 4px 12px rgba(10, 9, 8, 0.06);
+  --shadow-md:    0 2px 0 rgba(10, 9, 8, 0.1), 0 8px 24px rgba(10, 9, 8, 0.1);
 
-  /* ── CANALES RGB DEL PROYECTO ── */
-  --rgb-primary: 26, 26, 26;
-  --rgb-accent: 154, 0, 181;
-  --rgb-green: 43, 147, 72;
+  /* ── ESPACIADO ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
 
-  /* ── SOMBRAS CON PRIMARIO DEL PROYECTO ── */
-  --shadow-sm: 0 2px 8px rgba(var(--rgb-primary), 0.08);
-  --shadow-md: 0 4px 20px rgba(var(--rgb-primary), 0.12);
-  --shadow-lg: 0 8px 40px rgba(var(--rgb-primary), 0.18);
+  /* ── CONTENEDOR ── */
+  --container-max: 1280px;
+  --container-pad: 20px;
 
-  /* ── MODALES ── */
-  --clr-modal-aviso: #fef9c3;
-  --clr-modal-error: #fee2e2;
-  --clr-modal-exito: #dcfce7;
-  --clr-modal-carga: #e0f2fe;
+  /* ── TRANSICIÓN ── */
+  --transition: all 0.12s ease-out;
 
-  /* ── OVERLAYS ── */
-  --modal-backdrop: rgba(15, 23, 42, 0.38);
-  --overlay-bg: rgba(0, 0, 0, 0.7);
+  /* ── ALIASES COMPATIBLES CON TEMPLATE ── */
+  --clr-primary:       var(--carbon-900);
+  --clr-primary-mid:   var(--carbon-800);
+  --clr-primary-light: var(--bone-100);
+  --clr-accent:        var(--blood-600);
+  --clr-dark:          var(--carbon-900);
+  --clr-dark2:         var(--carbon-500);
+  --clr-gray:          var(--bone-300);
+  --clr-white:         var(--bone-50);
 
-  /* ── HEADER ── */
-  --header-bg-mobile: rgba(255, 255, 255, 0.95);
-  --header-bg-desktop: rgba(255, 255, 255, 0.6);
+  --rgb-primary: 10, 9, 8;
+  --rgb-accent:  176, 41, 31;
 
-  /* ── HERO ── */
-  --hero-overlay: rgba(var(--rgb-primary), 0.72);
+  --border-soft:  var(--border);
+  --border-hover: rgba(10, 9, 8, 0.4);
+  --bg-subtle:    rgba(10, 9, 8, 0.04);
 
-  /* ── FOOTER ── */
-  --footer-hover-bg: rgba(255, 255, 255, 0.07);
+  --header-bg-mobile:  var(--carbon-900);
+  --header-bg-desktop: var(--carbon-900);
+  --footer-hover-bg:   rgba(255, 255, 255, 0.07);
 
-  /* ── BORDES ── */
-  --border-soft: rgba(var(--rgb-primary), 0.1);
-  --border-hover: rgba(var(--rgb-primary), 0.22);
+  --hero-overlay:   rgba(10, 9, 8, 0.72);
+  --overlay-bg:     rgba(10, 9, 8, 0.7);
+  --modal-backdrop: rgba(10, 9, 8, 0.5);
+  --overlay-card:   rgba(10, 9, 8, 0.88);
 
-  /* ── FONDOS Y OVERLAYS ── */
-  --bg-subtle: rgba(var(--rgb-primary), 0.06);
-  --overlay-card: rgba(var(--rgb-primary), 0.88);
-
-  /* ── FOCUS RING ── */
-  --focus-ring: 0 0 0 3px rgba(var(--rgb-primary), 0.08);
+  --focus-ring: 0 0 0 3px rgba(10, 9, 8, 0.15);
 }
