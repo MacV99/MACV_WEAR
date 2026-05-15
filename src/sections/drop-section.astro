@@ -103,6 +103,46 @@
   }
 </style>
 
+<style is:global>
+  .drop-section .sheet-card {
+    border-color: var(--carbon-700);
+  }
+
+  .drop-section .sc-info {
+    background: var(--carbon-800);
+    border-top-color: var(--carbon-700);
+  }
+
+  .drop-section .sc-name,
+  .drop-section .sc-price {
+    color: var(--bone-50);
+  }
+
+  .drop-section .sc-sub {
+    color: var(--carbon-300);
+  }
+
+  .drop-section .sc-size {
+    border-color: var(--carbon-600);
+    color: var(--bone-200);
+    background: transparent;
+  }
+
+  .drop-section .sc-size.active {
+    background: var(--bone-50);
+    color: var(--carbon-900);
+    border-color: var(--bone-50);
+  }
+
+  .drop-section .sc-colordot {
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  .drop-section .sc-colordot.active {
+    outline-color: var(--bone-50);
+  }
+</style>
+
 <script>
   import { initDropCards } from '../scripts/sheet-products.ts';
   initDropCards('drop-grid', 2);

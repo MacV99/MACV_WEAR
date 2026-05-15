@@ -8,18 +8,18 @@
       <h2 class="editorial-title">Menos es más.<br />Pero tiene que ser bueno.</h2>
       <p class="editorial-body">
         Diseñamos ropa interior para hombres que no quieren pensar en ropa interior.
-        Sin adornos innecesarios, sin marcas llamativas. Solo algodón pima de primera calidad,
+        Sin adornos innecesarios, sin marcas llamativas. Solo microfibra de primera calidad,
         cortes que no se mueven y una durabilidad que justifica cada peso.
       </p>
       <ul class="editorial-points flex-column">
-        <li class="flex-row"><i class="bi bi-check2"></i> Algodón pima 100% peruano</li>
+        <li class="flex-row"><i class="bi bi-check2"></i> Microfibra 100%</li>
         <li class="flex-row"><i class="bi bi-check2"></i> Sin costuras internas irritantes</li>
         <li class="flex-row"><i class="bi bi-check2"></i> Elástico de alta durabilidad</li>
         <li class="flex-row"><i class="bi bi-check2"></i> Lavable a máquina, retiene la forma</li>
       </ul>
     </div>
     <div class="editorial-visual" aria-hidden="true">
-      <div class="visual-block"></div>
+      <img src="/img/logo-stamp.avif" alt="" class="editorial-logo" />
     </div>
   </div>
 </section>
@@ -92,15 +92,17 @@
 
   .editorial-visual {
     display: none;
-  }
-
-  .visual-block {
-    width: 100%;
-    aspect-ratio: 1;
-    background: linear-gradient(135deg, #2A2620 25%, #1F1D1A 25%, #1F1D1A 50%, #2A2620 50%, #2A2620 75%, #1F1D1A 75%);
+    background: linear-gradient(135deg, #EBE3D2 25%, #D9CFB9 25%, #D9CFB9 50%, #EBE3D2 50%, #EBE3D2 75%, #D9CFB9 75%);
     background-size: 36px 36px;
     border: 2px solid var(--carbon-900);
     box-shadow: var(--shadow-press);
+  }
+
+  .editorial-logo {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    padding: 32px;
   }
 
   @media (min-width: 750px) {

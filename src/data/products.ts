@@ -33,7 +33,7 @@ export const products: Product[] = [
   {
     slug: 'boxer-pima-negro',
     name: 'Bóxer Pima',
-    subtitle: '100% algodón pima',
+    subtitle: '100% microfibra',
     price: 45900,
     badge: null,
     colors: [COLORS.negro, COLORS.hueso, COLORS.oliva],
@@ -41,13 +41,13 @@ export const products: Product[] = [
     outOfStock: [],
     drop: null,
     featured: true,
-    description: 'Bóxer de corte ajustado en algodón pima peruano. Suave, transpirable y sin costuras incómodas. El que no te falla.',
-    material: '95% algodón pima, 5% elastano',
+    description: 'Bóxer de corte ajustado en microfibra. Suave, transpirable y sin costuras incómodas. El que no te falla.',
+    material: '95% microfibra, 5% elastano',
   },
   {
     slug: 'boxer-pima-hueso',
     name: 'Bóxer Pima',
-    subtitle: '100% algodón pima',
+    subtitle: '100% microfibra',
     price: 45900,
     badge: 'new',
     badgeLabel: 'Nuevo',
@@ -56,8 +56,8 @@ export const products: Product[] = [
     outOfStock: [],
     drop: null,
     featured: true,
-    description: 'Bóxer de corte ajustado en algodón pima peruano. Tono hueso neutro, ideal para el día a día.',
-    material: '95% algodón pima, 5% elastano',
+    description: 'Bóxer de corte ajustado en microfibra. Tono hueso neutro, ideal para el día a día.',
+    material: '95% microfibra, 5% elastano',
   },
   {
     slug: 'boxer-largo-negro',
@@ -71,7 +71,7 @@ export const products: Product[] = [
     drop: null,
     featured: true,
     description: 'Bóxer largo de corte mid-thigh. Más cobertura, mismo comfort. Perfecto para días activos.',
-    material: '92% algodón pima, 8% elastano',
+    material: '92% microfibra, 8% elastano',
   },
   {
     slug: 'boxer-largo-gris',
@@ -85,7 +85,7 @@ export const products: Product[] = [
     drop: null,
     featured: false,
     description: 'Bóxer largo en gris carbón. Versátil y cómodo para toda la jornada.',
-    material: '92% algodón pima, 8% elastano',
+    material: '92% microfibra, 8% elastano',
   },
   {
     slug: 'boxer-pima-oliva',
@@ -100,7 +100,7 @@ export const products: Product[] = [
     drop: 'Drop 03',
     featured: true,
     description: 'Bóxer pima en tono oliva. Parte del Drop 03, edición de temporada en cantidad limitada.',
-    material: '95% algodón pima, 5% elastano',
+    material: '95% microfibra, 5% elastano',
   },
   {
     slug: 'boxer-pima-rojo',
@@ -115,7 +115,7 @@ export const products: Product[] = [
     drop: 'Drop 03',
     featured: false,
     description: 'Bóxer pima en rojo sangre. Audaz, de edición limitada. Parte del Drop 03.',
-    material: '95% algodón pima, 5% elastano',
+    material: '95% microfibra, 5% elastano',
   },
   {
     slug: 'pack-3-basicos',
@@ -130,7 +130,7 @@ export const products: Product[] = [
     drop: null,
     featured: false,
     description: 'Los tres colores esenciales en un solo pack. La forma más inteligente de renovar tu cajón.',
-    material: '95% algodón pima, 5% elastano',
+    material: '95% microfibra, 5% elastano',
   },
   {
     slug: 'camiseta-pima-negra',
@@ -144,7 +144,7 @@ export const products: Product[] = [
     outOfStock: [],
     drop: null,
     featured: false,
-    description: 'Camiseta de cuello redondo en algodón pima. Corte slim que no aprieta ni se sale.',
-    material: '100% algodón pima',
+    description: 'Camiseta de cuello redondo en microfibra. Corte slim que no aprieta ni se sale.',
+    material: '100% microfibra',
   },
 ];
