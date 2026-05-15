@@ -149,7 +149,7 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
            ${!mainColor.imagen ? 'style="display:none"' : ''}
            onerror="this.style.display='none'">
       <span class="sc-initial"${mainColor.imagen ? ' style="display:none"' : ''}>${(gp.marca || gp.producto || 'M')[0].toUpperCase()}</span>
-      ${!hasStock ? '<span class="badge blood sc-badge">Agotado</span>' : ''}
+      <span class="badge blood sc-badge" style="display:none">Agotado</span>
     </div>
     <div class="sc-info">
       <div class="sc-top">
@@ -167,6 +167,7 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
   const visualEl  = el.querySelector('.sc-visual') as HTMLElement;
   const imgEl     = el.querySelector('.sc-img') as HTMLImageElement;
   const initialEl = el.querySelector('.sc-initial') as HTMLElement;
+  const badgeEl   = el.querySelector('.sc-badge') as HTMLElement;
   const sizesEl   = el.querySelector('.sc-sizes') as HTMLElement;
   const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
@@ -207,6 +208,11 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
     }
     el.querySelectorAll('.sc-colordot').forEach((dot, j) => dot.classList.toggle('active', j === idx));
     el.href = `/producto?p=${gp.slug}&color=${encodeURIComponent(c.name)}`;
+
+    const colorHasStock = gp.skus.some(s => s.color === c.name && parseInt(s.stock, 10) > 0);
+    badgeEl.style.display = colorHasStock ? 'none' : '';
+    el.classList.toggle('oos', !colorHasStock);
+
     renderSizes(c.name);
   }
 

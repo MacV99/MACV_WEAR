@@ -105,8 +105,8 @@
 }
 
 .sc-colordot {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1.5px solid rgba(10, 9, 8, 0.2);
   flex-shrink: 0;
@@ -115,8 +115,8 @@
 }
 
 .sc-colordot.active {
-  outline: 1.5px solid var(--carbon-900);
-  outline-offset: 1.5px;
+  outline: 2px solid var(--carbon-900);
+  outline-offset: 2px;
 }
 
 .sc-sizes {
