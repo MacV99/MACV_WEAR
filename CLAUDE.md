@@ -71,6 +71,8 @@ Las variables semánticas derivadas (`--border-soft`, `--border-hover`, `--bg-su
 
 Nunca `style=""` inline en etiquetas HTML. Nunca colores hardcodeados — siempre variables CSS. Breakpoint principal: `min-width: 750px`.
 
+**Astro CSS scoping + JS dinámico:** El scope de Astro funciona añadiendo un atributo data a los elementos del template. Los elementos creados por JavaScript en runtime (`document.createElement`, `innerHTML`, etc.) **no reciben ese atributo** y por tanto ignoran los estilos del `<style>` normal. Cuando una página renderiza elementos vía JS, usar `<style is:global>` en ese archivo `.astro`.
+
 ## Assets
 
 Logos en `public/img/` en formato `.avif`:
