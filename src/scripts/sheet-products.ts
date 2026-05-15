@@ -273,8 +273,8 @@ function render() {
   const countEl = document.getElementById('tienda-count');
   if (countEl) {
     countEl.textContent = filtered.length === state.grouped.length
-      ? `${filtered.length} referencia${filtered.length !== 1 ? 's' : ''}`
-      : `${filtered.length} de ${state.grouped.length} referencia${filtered.length !== 1 ? 's' : ''}`;
+      ? `${filtered.length} referencias`
+      : `${filtered.length} de ${state.grouped.length} referencias`;
   }
 }
 
