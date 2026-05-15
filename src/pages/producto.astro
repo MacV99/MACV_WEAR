@@ -1,0 +1,540 @@
+---
+import Layout1 from '../layouts/Layout1.astro';
+---
+
+<Layout1 title="Producto — MacV Wear">
+  <section class="pdp-section" id="pdp-root">
+    <!-- skeleton mientras carga -->
+    <div class="container pdp-grid" id="pdp-skeleton">
+      <div class="sk-gallery">
+        <div class="sk-main"></div>
+        <div class="sk-thumbs">
+          <div class="sk-thumb"></div>
+          <div class="sk-thumb"></div>
+          <div class="sk-thumb"></div>
+        </div>
+      </div>
+      <div class="sk-info">
+        <div class="sk-line" style="width:40%;height:12px"></div>
+        <div class="sk-line" style="width:70%;height:40px;margin-top:8px"></div>
+        <div class="sk-line" style="width:30%;height:28px;margin-top:16px"></div>
+        <div class="sk-line" style="width:100%;height:44px;margin-top:24px"></div>
+        <div class="sk-line" style="width:100%;height:44px;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- contenido real (oculto hasta que carga) -->
+    <div class="container pdp-grid" id="pdp-content" hidden>
+
+      <!-- GALERÍA -->
+      <div class="gallery flex-column">
+        <div class="gallery-main" id="pdp-gallery-main"></div>
+        <div class="gallery-thumbs flex-row" id="pdp-thumbs"></div>
+      </div>
+
+      <!-- INFO -->
+      <div class="pdp-info flex-column">
+        <div class="pdp-top flex-column">
+          <span class="pdp-brand" id="pdp-brand"></span>
+          <h1 class="pdp-title" id="pdp-title"></h1>
+          <p class="pdp-subtitle" id="pdp-subtitle"></p>
+        </div>
+
+        <span class="pdp-price" id="pdp-price"></span>
+
+        <!-- COLOR -->
+        <div class="option-group flex-column">
+          <div class="option-label flex-row">
+            <span class="option-key">Color</span>
+            <span class="option-val" id="pdp-color-name">—</span>
+          </div>
+          <div class="color-swatches flex-row" id="pdp-swatches"></div>
+        </div>
+
+        <!-- TALLA -->
+        <div class="option-group flex-column">
+          <div class="option-label flex-row">
+            <span class="option-key">Talla</span>
+            <span class="option-val" id="pdp-size-name">—</span>
+          </div>
+          <div class="size-pills flex-row" id="pdp-sizes"></div>
+        </div>
+
+        <!-- QTY -->
+        <div class="option-group flex-column">
+          <div class="option-label flex-row">
+            <span class="option-key">Cantidad</span>
+          </div>
+          <div class="qty-stepper flex-row">
+            <button class="qty-btn" id="qty-dec" aria-label="Menos">−</button>
+            <input class="qty-input" id="qty-input" type="number" min="1" max="10" value="1" />
+            <button class="qty-btn" id="qty-inc" aria-label="Más">+</button>
+          </div>
+        </div>
+
+        <!-- MATERIAL -->
+        <p class="pdp-material"><strong>Material:</strong> <span id="pdp-material"></span></p>
+
+        <!-- ACCIONES -->
+        <button class="btn full" id="pdp-add-btn" disabled>Selecciona una talla</button>
+
+        <!-- DESCRIPCIÓN -->
+        <p class="pdp-desc" id="pdp-desc"></p>
+      </div>
+    </div>
+
+    <!-- error -->
+    <div class="container" id="pdp-error" hidden>
+      <div class="pdp-error-box flex-column">
+        <p>No encontramos este producto.</p>
+        <a href="/tienda" class="btn sm">Ver tienda</a>
+      </div>
+    </div>
+  </section>
+</Layout1>
+
+<style>
+  .pdp-section {
+    background: var(--bg);
+    padding: 48px 0 80px;
+  }
+
+  .pdp-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* ── Skeleton ── */
+  .sk-gallery { display: flex; flex-direction: column; gap: 12px; }
+  .sk-main {
+    width: 100%;
+    aspect-ratio: 1 / 1.05;
+    background: var(--bone-200);
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .sk-thumbs { display: flex; gap: 8px; }
+  .sk-thumb {
+    width: 60px;
+    height: 64px;
+    background: var(--bone-200);
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .sk-info { display: flex; flex-direction: column; gap: 12px; }
+  .sk-line {
+    background: var(--bone-300);
+    border-radius: 2px;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* ── GALERÍA ── */
+  .gallery { gap: 12px; align-items: stretch; }
+
+  .gallery-main {
+    width: 100%;
+    aspect-ratio: 1 / 1.05;
+    border: 2px solid var(--carbon-900);
+    transition: background 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gallery-main img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .gallery-thumbs { gap: 8px; justify-content: flex-start; }
+
+  .thumb {
+    width: 60px;
+    height: 64px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.12s ease;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .thumb.active { border: 2px solid var(--carbon-900); }
+
+  /* ── INFO ── */
+  .pdp-info { align-items: flex-start; gap: 24px; }
+  .pdp-top { align-items: flex-start; gap: 6px; }
+
+  .pdp-brand {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  .pdp-title {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 6vw, 52px);
+    line-height: 0.95;
+    text-transform: uppercase;
+    color: var(--carbon-900);
+    letter-spacing: -0.01em;
+  }
+
+  .pdp-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  .pdp-price {
+    font-family: var(--font-display-alt);
+    font-size: 28px;
+    color: var(--carbon-900);
+  }
+
+  /* ── OPTIONS ── */
+  .option-group { align-items: flex-start; gap: 10px; width: 100%; }
+  .option-label { gap: 8px; align-items: baseline; }
+
+  .option-key {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--carbon-500);
+  }
+
+  .option-val {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--carbon-900);
+  }
+
+  .color-swatches { gap: 8px; justify-content: flex-start; }
+
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: outline-color 0.12s ease;
+  }
+
+  .swatch.active { outline-color: var(--carbon-900); }
+
+  .size-pills { gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
+
+  .size-pill {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1.5px solid var(--carbon-900);
+    background: var(--bone-50);
+    color: var(--carbon-900);
+    font-family: var(--font-display-alt);
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .size-pill.active { background: var(--carbon-900); color: var(--bone-50); }
+  .size-pill.oos { opacity: 0.3; text-decoration: line-through; cursor: not-allowed; }
+
+  .qty-stepper { border: 1.5px solid var(--carbon-900); gap: 0; }
+
+  .qty-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px 16px;
+    font-size: 16px;
+    color: var(--carbon-900);
+    line-height: 1;
+    transition: var(--transition);
+  }
+
+  .qty-input {
+    width: 48px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: transparent;
+    font-family: var(--font-display-alt);
+    font-size: 14px;
+    color: var(--carbon-900);
+    padding: 10px 0;
+  }
+
+  .qty-input:focus { outline: none; }
+
+  .pdp-material { font-size: 12px; color: var(--carbon-300); }
+  .pdp-material strong { color: var(--carbon-500); font-weight: 700; }
+
+  #pdp-add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .pdp-desc {
+    font-size: 14px;
+    color: var(--carbon-500);
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    width: 100%;
+  }
+
+  .pdp-error-box {
+    align-items: center;
+    gap: 20px;
+    padding: 80px 0;
+    text-align: center;
+    color: var(--carbon-500);
+  }
+
+  @keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+  }
+
+  @media (hover: hover) {
+    .thumb:hover { border-color: var(--carbon-900); }
+    .size-pill:not(.oos):not(.active):hover { background: var(--bone-200); }
+    .qty-btn:hover { background: var(--bone-200); }
+  }
+
+  @media (min-width: 750px) {
+    .pdp-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 56px;
+    }
+  }
+</style>
+
+<script>
+  import { fetchSheetProducts, groupProducts, getHex } from '../scripts/sheet-products.ts';
+
+  const DEFAULT_DESC = 'Diseño premium con acabados de alta calidad. Confeccionado para durar y para sentirte bien todo el día, sin compromisos.';
+  const DEFAULT_MATERIAL = 'Microfibra premium';
+
+  const params = new URLSearchParams(location.search);
+  const slug = params.get('p');
+
+  const skeletonEl  = document.getElementById('pdp-skeleton')!;
+  const contentEl   = document.getElementById('pdp-content')!;
+  const errorEl     = document.getElementById('pdp-error')!;
+
+  const brandEl     = document.getElementById('pdp-brand')!;
+  const titleEl     = document.getElementById('pdp-title')!;
+  const subtitleEl  = document.getElementById('pdp-subtitle')!;
+  const priceEl     = document.getElementById('pdp-price')!;
+  const colorNameEl = document.getElementById('pdp-color-name')!;
+  const sizeNameEl  = document.getElementById('pdp-size-name')!;
+  const swatchesEl  = document.getElementById('pdp-swatches')!;
+  const sizesEl     = document.getElementById('pdp-sizes')!;
+  const materialEl  = document.getElementById('pdp-material')!;
+  const descEl      = document.getElementById('pdp-desc')!;
+  const addBtn      = document.getElementById('pdp-add-btn') as HTMLButtonElement;
+  const galleryMain = document.getElementById('pdp-gallery-main')!;
+  const thumbsEl    = document.getElementById('pdp-thumbs')!;
+  const qtyInput    = document.getElementById('qty-input') as HTMLInputElement;
+
+  let selectedColorIdx = 0;
+  let selectedSize: string | null = null;
+  let currentProduct: ReturnType<typeof groupProducts>[0] | null = null;
+
+  function fmtCOP(val: string) {
+    const n = parseInt(String(val).replace(/[^\d]/g, ''), 10);
+    return isNaN(n) ? val : '$ ' + n.toLocaleString('es-CO');
+  }
+
+  function updateGallery(idx: number) {
+    selectedColorIdx = idx;
+    const c = currentProduct!.colors[idx];
+    const hex = c.hex;
+
+    galleryMain.style.background = `linear-gradient(150deg,${hex}44 0%,${hex}18 100%)`;
+    galleryMain.innerHTML = c.imagen
+      ? `<img src="${c.imagen}" alt="${c.name}" onerror="this.remove()">`
+      : '';
+
+    document.querySelectorAll<HTMLButtonElement>('.thumb').forEach((t, i) => {
+      t.classList.toggle('active', i === idx);
+    });
+    document.querySelectorAll<HTMLButtonElement>('.swatch').forEach((s, i) => {
+      s.classList.toggle('active', i === idx);
+      s.setAttribute('aria-pressed', String(i === idx));
+    });
+
+    colorNameEl.textContent = c.name;
+    selectedSize = null;
+    sizeNameEl.textContent = '—';
+    updateSizes();
+    updateAddBtn();
+  }
+
+  function updateSizes() {
+    if (!currentProduct) return;
+    const colorName = currentProduct.colors[selectedColorIdx].name;
+    sizesEl.innerHTML = '';
+
+    const sizesForColor = currentProduct.skus
+      .filter(s => s.color === colorName)
+      .sort((a, b) => {
+        const order = ['XS','S','M','L','XL','XXL'];
+        return order.indexOf(a.talla) - order.indexOf(b.talla);
+      });
+
+    sizesForColor.forEach(sku => {
+      const inStock = parseInt(sku.stock, 10) > 0;
+      const btn = document.createElement('button');
+      btn.className = `size-pill${!inStock ? ' oos' : ''}`;
+      btn.dataset.size = sku.talla;
+      btn.disabled = !inStock;
+      btn.textContent = sku.talla;
+      btn.setAttribute('aria-label', `Talla ${sku.talla}${!inStock ? ', agotado' : ''}`);
+      if (inStock) {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.size-pill').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          selectedSize = sku.talla;
+          sizeNameEl.textContent = selectedSize;
+          updateAddBtn();
+        });
+      }
+      sizesEl.appendChild(btn);
+    });
+  }
+
+  function updateAddBtn() {
+    if (selectedSize) {
+      addBtn.disabled = false;
+      addBtn.textContent = 'Añadir al carrito';
+    } else {
+      addBtn.disabled = true;
+      addBtn.textContent = 'Selecciona una talla';
+    }
+  }
+
+  async function init() {
+    if (!slug) { showError(); return; }
+
+    try {
+      const skus = await fetchSheetProducts();
+      const grouped = groupProducts(skus);
+      const product = grouped.find(gp => gp.slug === slug);
+
+      if (!product) { showError(); return; }
+
+      currentProduct = product;
+      document.title = `${product.producto} ${product.marca} — MacV Wear`;
+
+      brandEl.textContent   = product.marca;
+      titleEl.textContent   = product.producto;
+      subtitleEl.textContent = product.colors.map(c => c.name).join(' · ');
+      priceEl.textContent   = fmtCOP(product.precio);
+      materialEl.textContent = DEFAULT_MATERIAL;
+      descEl.textContent    = DEFAULT_DESC;
+
+      // thumbnails
+      thumbsEl.innerHTML = '';
+      product.colors.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = `thumb${i === 0 ? ' active' : ''}`;
+        btn.setAttribute('aria-label', `Color ${c.name}`);
+        btn.style.background = `linear-gradient(150deg,${c.hex}44 0%,${c.hex}18 100%)`;
+        if (c.imagen) btn.innerHTML = `<img src="${c.imagen}" alt="${c.name}" onerror="this.remove()">`;
+        btn.addEventListener('click', () => updateGallery(i));
+        thumbsEl.appendChild(btn);
+      });
+
+      // swatches
+      swatchesEl.innerHTML = '';
+      product.colors.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = `swatch${i === 0 ? ' active' : ''}`;
+        btn.dataset.idx = String(i);
+        btn.setAttribute('aria-label', c.name);
+        btn.setAttribute('aria-pressed', String(i === 0));
+        btn.style.cssText = `background:${c.hex}; border-color:${c.hex}`;
+        btn.addEventListener('click', () => updateGallery(i));
+        swatchesEl.appendChild(btn);
+      });
+
+      updateGallery(0);
+
+      // qty
+      document.getElementById('qty-dec')!.addEventListener('click', () => {
+        const v = parseInt(qtyInput.value);
+        if (v > 1) qtyInput.value = String(v - 1);
+      });
+      document.getElementById('qty-inc')!.addEventListener('click', () => {
+        const v = parseInt(qtyInput.value);
+        if (v < 10) qtyInput.value = String(v + 1);
+      });
+
+      // add to cart
+      addBtn.addEventListener('click', () => {
+        if (!selectedSize || !currentProduct) return;
+        const c = currentProduct.colors[selectedColorIdx];
+        (window as any).MacVCart.add({
+          slug:          `${currentProduct.slug}-${selectedSize}-${c.name}`.toLowerCase(),
+          name:          currentProduct.producto,
+          brand:         currentProduct.marca,
+          color:         c.name,
+          colorName:     c.name,
+          colorHex:      c.hex,
+          colorGradient: '',
+          image:         c.imagen || undefined,
+          size:          selectedSize,
+          price:         parseInt(String(currentProduct.precio).replace(/[^\d]/g, ''), 10),
+          qty:           parseInt(qtyInput.value) || 1,
+        });
+        (window as any).MacVCart.open();
+      });
+
+      skeletonEl.hidden = true;
+      contentEl.hidden = false;
+
+    } catch (err) {
+      console.error('PDP error:', err);
+      showError();
+    }
+  }
+
+  function showError() {
+    skeletonEl.hidden = true;
+    errorEl.hidden = false;
+  }
+
+  init();
+</script>

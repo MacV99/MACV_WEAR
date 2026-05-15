@@ -5,6 +5,8 @@
   flex-direction: column;
   border: 1.5px solid var(--carbon-900);
   animation: fadeInUp 0.3s ease-out both;
+  text-decoration: none;
+  color: inherit;
 }
 
 .sheet-card.oos {
@@ -80,6 +82,13 @@
   flex-shrink: 0;
 }
 
+.sc-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .sc-sub {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -87,27 +96,20 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--carbon-300);
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.sc-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(10, 9, 8, 0.25);
+.sc-colordots {
+  display: flex;
+  gap: 4px;
   flex-shrink: 0;
 }
 
-.sc-add {
-  margin-top: 10px;
-}
-
-.sc-add:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  box-shadow: none;
+.sc-colordot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(10, 9, 8, 0.2);
+  flex-shrink: 0;
 }
 
 /* ── filter chips (tienda — creados por JS) ── */

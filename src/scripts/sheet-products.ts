@@ -2,6 +2,7 @@ const SHEET_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2Wmwnf0rWb4w9ULj5tU59U4T6Rxy_7XWFo6vYugOdMenJpce-87PzW3UVn8I7F6lqi-5KVtNHniZq/pub?output=csv&gid=2056806095';
 
 let _cache: SheetProduct[] | null = null;
+let _inflight: Promise<SheetProduct[]> | null = null;
 
 interface SheetProduct {
   producto: string;
@@ -13,11 +14,22 @@ interface SheetProduct {
   imagen: string;
 }
 
+export interface GroupedProduct {
+  slug: string;
+  producto: string;
+  marca: string;
+  precio: string;
+  imagen: string;
+  colors: Array<{ name: string; hex: string; imagen: string }>;
+  sizes: string[];
+  skus: SheetProduct[];
+}
+
 const COLOR_HEX: Record<string, string> = {
   negro:  '#2A2620',
   hueso:  '#D9CFB9',
   oliva:  '#5A5A2E',
-  gris:   '#3A3631',
+  gris:   '#9B9590',
   rojo:   '#B0291F',
   sangre: '#B0291F',
   azul:   '#1B3A6B',
@@ -25,8 +37,45 @@ const COLOR_HEX: Record<string, string> = {
   beige:  '#B8AC92',
 };
 
-function getHex(color: string): string {
+export function getHex(color: string): string {
   return COLOR_HEX[color.toLowerCase()] ?? '#6B655C';
+}
+
+function toSlug(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+export function groupProducts(skus: SheetProduct[]): GroupedProduct[] {
+  const map = new Map<string, GroupedProduct>();
+
+  for (const sku of skus) {
+    const slug = `${toSlug(sku.marca)}-${toSlug(sku.producto)}`;
+    if (!map.has(slug)) {
+      map.set(slug, {
+        slug,
+        producto: sku.producto,
+        marca: sku.marca,
+        precio: sku.precio,
+        imagen: sku.imagen,
+        colors: [],
+        sizes: [],
+        skus: [],
+      });
+    }
+    const gp = map.get(slug)!;
+    gp.skus.push(sku);
+
+    if (!gp.colors.find(c => c.name === sku.color)) {
+      gp.colors.push({ name: sku.color, hex: getHex(sku.color), imagen: sku.imagen });
+    }
+    if (!gp.sizes.includes(sku.talla)) {
+      gp.sizes.push(sku.talla);
+    }
+    if (!gp.imagen && sku.imagen) gp.imagen = sku.imagen;
+  }
+
+  return [...map.values()];
 }
 
 function parseLine(line: string): string[] {
@@ -76,48 +125,43 @@ function unique(products: SheetProduct[], key: keyof SheetProduct): string[] {
 
 const state = {
   products: [] as SheetProduct[],
+  grouped: [] as GroupedProduct[],
   filters: { brand: '', size: '', color: '', onlyStock: false, search: '' },
 };
 
-// ─── card ─────────────────────────────────────────────────────────────────────
+// ─── grouped card ─────────────────────────────────────────────────────────────
 
-function buildCard(p: SheetProduct, i: number): HTMLElement {
-  const inStock = parseInt(p.stock, 10) > 0;
-  const hex = getHex(p.color);
-  const el = document.createElement('article');
-  el.className = `sheet-card${inStock ? '' : ' oos'}`;
+function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
+  const mainHex = gp.colors[0]?.hex ?? '#6B655C';
+  const hasStock = gp.skus.some(s => parseInt(s.stock, 10) > 0);
+  const el = document.createElement('a');
+  el.className = `sheet-card${hasStock ? '' : ' oos'}`;
+  el.href = `/producto?p=${gp.slug}`;
   el.style.animationDelay = `${(i % 12) * 0.05}s`;
 
+  const colorDots = gp.colors.map(c =>
+    `<span class="sc-colordot" style="background:${c.hex}" title="${c.name}"></span>`
+  ).join('');
+
   el.innerHTML = `
-    <div class="sc-visual" style="background:linear-gradient(150deg,${hex}44 0%,${hex}18 100%);">
-      ${p.imagen
-        ? `<img class="sc-img" src="${p.imagen}" alt="${p.producto}" loading="lazy"
+    <div class="sc-visual" style="background:linear-gradient(150deg,${mainHex}44 0%,${mainHex}18 100%);">
+      ${gp.imagen
+        ? `<img class="sc-img" src="${gp.imagen}" alt="${gp.producto}" loading="lazy"
              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
         : ''
       }
-      <span class="sc-initial"${p.imagen ? ' style="display:none"' : ''}>${(p.marca || p.producto || 'M')[0].toUpperCase()}</span>
-      <span class="badge ${inStock ? 'olive' : 'blood'} sc-badge">${inStock ? `Stock: ${p.stock}` : 'Agotado'}</span>
+      <span class="sc-initial"${gp.imagen ? ' style="display:none"' : ''}>${(gp.marca || gp.producto || 'M')[0].toUpperCase()}</span>
+      ${!hasStock ? '<span class="badge blood sc-badge">Agotado</span>' : ''}
     </div>
     <div class="sc-info">
       <div class="sc-top">
-        <span class="sc-name">${p.producto}</span>
-        <span class="sc-price">${fmtCOP(p.precio)}</span>
+        <span class="sc-name">${gp.marca}</span>
+        <span class="sc-price">${fmtCOP(gp.precio)}</span>
       </div>
-      <span class="sc-sub">
-        <span class="sc-dot" style="background:${hex}"></span>
-        ${p.marca} · ${p.color} · T.${p.talla}
-      </span>
-      <button
-        class="btn sm full sc-add"
-        ${!inStock ? 'disabled' : ''}
-        data-nombre="${p.producto}"
-        data-marca="${p.marca}"
-        data-talla="${p.talla}"
-        data-color="${p.color}"
-        data-precio="${p.precio}"
-        data-hex="${hex}"
-        data-imagen="${p.imagen ?? ''}"
-      ><i class="bi ${inStock ? 'bi-bag-plus' : 'bi-bag-x'}"></i>${inStock ? 'Agregar' : 'Sin stock'}</button>
+      <div class="sc-bottom">
+        <span class="sc-sub">${gp.producto}</span>
+        <div class="sc-colordots">${colorDots}</div>
+      </div>
     </div>
   `;
   return el;
@@ -145,14 +189,14 @@ function render() {
   const grid = document.getElementById('tienda-grid')!;
   const { brand, size, color, onlyStock, search } = state.filters;
 
-  const filtered = state.products.filter(p => {
-    if (brand && p.marca?.toLowerCase() !== brand.toLowerCase()) return false;
-    if (size && p.talla?.toLowerCase() !== size.toLowerCase()) return false;
-    if (color && p.color?.toLowerCase() !== color.toLowerCase()) return false;
-    if (onlyStock && parseInt(p.stock, 10) <= 0) return false;
+  const filtered = state.grouped.filter(gp => {
+    if (brand && gp.marca?.toLowerCase() !== brand.toLowerCase()) return false;
+    if (size && !gp.sizes.some(s => s.toLowerCase() === size.toLowerCase())) return false;
+    if (color && !gp.colors.some(c => c.name.toLowerCase() === color.toLowerCase())) return false;
+    if (onlyStock && !gp.skus.some(s => parseInt(s.stock, 10) > 0)) return false;
     if (search) {
       const q = search.toLowerCase();
-      if (!p.producto?.toLowerCase().includes(q) && !p.marca?.toLowerCase().includes(q)) return false;
+      if (!gp.producto?.toLowerCase().includes(q) && !gp.marca?.toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -163,14 +207,14 @@ function render() {
     grid.innerHTML = `<div class="sheet-empty"><p>Sin resultados.</p><button class="btn sm ghost" id="sheet-clear-empty">Ver todos</button></div>`;
     document.getElementById('sheet-clear-empty')?.addEventListener('click', clearFilters);
   } else {
-    filtered.forEach((p, i) => grid.appendChild(buildCard(p, i)));
+    filtered.forEach((gp, i) => grid.appendChild(buildGroupedCard(gp, i)));
   }
 
   const countEl = document.getElementById('tienda-count');
   if (countEl) {
-    countEl.textContent = filtered.length === state.products.length
+    countEl.textContent = filtered.length === state.grouped.length
       ? `${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`
-      : `${filtered.length} de ${state.products.length} producto${filtered.length !== 1 ? 's' : ''}`;
+      : `${filtered.length} de ${state.grouped.length} producto${filtered.length !== 1 ? 's' : ''}`;
   }
 }
 
@@ -191,72 +235,43 @@ function clearFilters() {
 
 // ─── shared fetch with cache ──────────────────────────────────────────────────
 
-async function fetchProducts(): Promise<SheetProduct[]> {
-  if (_cache) return _cache;
-  const res = await fetch(SHEET_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  _cache = parseCSV(await res.text());
-  return _cache;
+export function fetchSheetProducts(): Promise<SheetProduct[]> {
+  return fetchProducts();
 }
 
-// ─── home grid (first N in-stock products) ────────────────────────────────────
+function fetchProducts(): Promise<SheetProduct[]> {
+  if (_cache) return Promise.resolve(_cache);
+  _inflight ??= fetch(SHEET_URL)
+    .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
+    .then(text => { _cache = parseCSV(text); return _cache!; })
+    .finally(() => { _inflight = null; });
+  return _inflight;
+}
 
-export async function initHomeCards(gridId: string, limit = 4) {
+// ─── home / drop grids ────────────────────────────────────────────────────────
+
+const SK = `<div class="sk-card"><div class="sk-visual"></div><div class="sk-body"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:75%"></div></div></div>`;
+
+async function initGrid(gridId: string, limit: number, select: (ps: SheetProduct[]) => SheetProduct[]) {
   const grid = document.getElementById(gridId);
   if (!grid) return;
-  grid.innerHTML = Array(limit).fill(`<div class="sk-card"><div class="sk-visual"></div><div class="sk-body"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:75%"></div></div></div>`).join('');
+  grid.innerHTML = Array(limit).fill(SK).join('');
   try {
-    const products = await fetchProducts();
-    const slice = products.filter(p => parseInt(p.stock, 10) > 0).slice(0, limit);
+    const skus = select(await fetchProducts());
+    const grouped = groupProducts(skus);
     grid.innerHTML = '';
-    slice.forEach((p, i) => grid.appendChild(buildCard(p, i)));
-    wireCart(grid);
+    grouped.slice(0, limit).forEach((gp, i) => grid.appendChild(buildGroupedCard(gp, i)));
   } catch (err) {
-    console.error('initHomeCards:', err);
+    console.error(`initGrid(${gridId}):`, err);
     grid.innerHTML = '';
   }
 }
 
-// ─── drop grid (last N products) ─────────────────────────────────────────────
+export const initHomeCards = (gridId: string, limit = 4) =>
+  initGrid(gridId, limit, ps => ps.filter(p => parseInt(p.stock, 10) > 0).slice(0, limit * 4));
 
-export async function initDropCards(gridId: string, limit = 2) {
-  const grid = document.getElementById(gridId);
-  if (!grid) return;
-  grid.innerHTML = Array(limit).fill(`<div class="sk-card"><div class="sk-visual"></div><div class="sk-body"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:75%"></div></div></div>`).join('');
-  try {
-    const products = await fetchProducts();
-    const slice = products.slice(-limit);
-    grid.innerHTML = '';
-    slice.forEach((p, i) => grid.appendChild(buildCard(p, i)));
-    wireCart(grid);
-  } catch (err) {
-    console.error('initDropCards:', err);
-    grid.innerHTML = '';
-  }
-}
-
-function wireCart(grid: HTMLElement) {
-  grid.addEventListener('click', e => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.sc-add');
-    if (!btn || btn.disabled) return;
-    const { nombre, marca, talla, color, precio, hex, gradient, imagen } = btn.dataset;
-    if (!nombre) return;
-    window.MacVCart.add({
-      slug:          `${marca ?? ''}-${nombre}-${talla}-${color}`.toLowerCase().replace(/\s+/g, '-'),
-      name:          nombre,
-      brand:         marca,
-      color:         color!,
-      colorName:     color!,
-      colorHex:      hex!,
-      colorGradient: gradient ?? '',
-      image:         imagen || undefined,
-      size:          talla!,
-      price:         parseInt(String(precio).replace(/[^\d]/g, ''), 10),
-      qty:           1,
-    });
-    window.MacVCart.open();
-  });
-}
+export const initDropCards = (gridId: string, limit = 2) =>
+  initGrid(gridId, limit, ps => ps.slice(-limit * 4));
 
 // ─── init tienda ──────────────────────────────────────────────────────────────
 
@@ -281,6 +296,8 @@ export async function initSheetProducts() {
       grid.innerHTML = `<p class="sheet-empty-msg">No hay productos disponibles.</p>`;
       return;
     }
+
+    state.grouped = groupProducts(state.products);
 
     buildFilterGroup('filter-brand', 'brand', unique(state.products, 'marca'));
     buildFilterGroup('filter-size',  'size',  unique(state.products, 'talla'));
@@ -323,8 +340,6 @@ export async function initSheetProducts() {
 
     // clear button
     document.getElementById('tienda-clear')?.addEventListener('click', clearFilters);
-
-    wireCart(grid);
 
   } catch (err) {
     console.error('Error cargando catálogo:', err);
