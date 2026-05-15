@@ -4,7 +4,6 @@ import Layout1 from '../layouts/Layout1.astro';
 
 <Layout1 title="Producto — MacV Wear">
   <section class="pdp-section" id="pdp-root">
-    <!-- skeleton mientras carga -->
     <div class="container pdp-grid" id="pdp-skeleton">
       <div class="sk-gallery">
         <div class="sk-main"></div>
@@ -23,16 +22,15 @@ import Layout1 from '../layouts/Layout1.astro';
       </div>
     </div>
 
-    <!-- contenido real (oculto hasta que carga) -->
     <div class="container pdp-grid" id="pdp-content" hidden>
 
-      <!-- GALERÍA -->
+
       <div class="gallery flex-column">
         <div class="gallery-main" id="pdp-gallery-main"></div>
         <div class="gallery-thumbs flex-row" id="pdp-thumbs"></div>
       </div>
 
-      <!-- INFO -->
+
       <div class="pdp-info flex-column">
         <div class="pdp-top flex-column">
           <span class="pdp-brand" id="pdp-brand"></span>
@@ -42,7 +40,7 @@ import Layout1 from '../layouts/Layout1.astro';
 
         <span class="pdp-price" id="pdp-price"></span>
 
-        <!-- COLOR -->
+
         <div class="option-group flex-column">
           <div class="option-label flex-row">
             <span class="option-key">Color</span>
@@ -51,7 +49,7 @@ import Layout1 from '../layouts/Layout1.astro';
           <div class="color-swatches flex-row" id="pdp-swatches"></div>
         </div>
 
-        <!-- TALLA -->
+
         <div class="option-group flex-column">
           <div class="option-label flex-row">
             <span class="option-key">Talla</span>
@@ -60,7 +58,7 @@ import Layout1 from '../layouts/Layout1.astro';
           <div class="size-pills flex-row" id="pdp-sizes"></div>
         </div>
 
-        <!-- QTY -->
+
         <div class="option-group flex-column">
           <div class="option-label flex-row">
             <span class="option-key">Cantidad</span>
@@ -72,18 +70,18 @@ import Layout1 from '../layouts/Layout1.astro';
           </div>
         </div>
 
-        <!-- MATERIAL -->
+
         <p class="pdp-material"><strong>Material:</strong> <span id="pdp-material"></span></p>
 
-        <!-- ACCIONES -->
+
         <button class="btn full" id="pdp-add-btn" disabled>Selecciona una talla</button>
 
-        <!-- DESCRIPCIÓN -->
+
         <p class="pdp-desc" id="pdp-desc"></p>
       </div>
     </div>
 
-    <!-- error -->
+
     <div class="container" id="pdp-error" hidden>
       <div class="pdp-error-box flex-column">
         <p>No encontramos este producto.</p>
@@ -321,11 +319,6 @@ import Layout1 from '../layouts/Layout1.astro';
     color: var(--carbon-500);
   }
 
-  @keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.5; }
-  }
-
   @media (hover: hover) {
     .thumb:hover { border-color: var(--carbon-900); }
     .size-pill:not(.oos):not(.active):hover { background: var(--bone-200); }
@@ -341,7 +334,7 @@ import Layout1 from '../layouts/Layout1.astro';
 </style>
 
 <script>
-  import { fetchSheetProducts, groupProducts, getHex } from '../scripts/sheet-products.ts';
+  import { fetchProducts, groupProducts, fmtCOP, SIZE_ORDER } from '../scripts/sheet-products.ts';
 
   const DEFAULT_DESC = 'Diseño premium con acabados de alta calidad. Confeccionado para durar y para sentirte bien todo el día, sin compromisos.';
   const DEFAULT_MATERIAL = 'Microfibra premium';
@@ -373,11 +366,6 @@ import Layout1 from '../layouts/Layout1.astro';
   let selectedColorIdx = 0;
   let selectedSize: string | null = null;
   let currentProduct: ReturnType<typeof groupProducts>[0] | null = null;
-
-  function fmtCOP(val: string) {
-    const n = parseInt(String(val).replace(/[^\d]/g, ''), 10);
-    return isNaN(n) ? val : '$ ' + n.toLocaleString('es-CO');
-  }
 
   function updateGallery(idx: number) {
     selectedColorIdx = idx;
@@ -411,10 +399,7 @@ import Layout1 from '../layouts/Layout1.astro';
 
     const sizesForColor = currentProduct.skus
       .filter(s => s.color === colorName)
-      .sort((a, b) => {
-        const order = ['XS','S','M','L','XL','XXL'];
-        return order.indexOf(a.talla) - order.indexOf(b.talla);
-      });
+      .sort((a, b) => SIZE_ORDER.indexOf(a.talla) - SIZE_ORDER.indexOf(b.talla));
 
     sizesForColor.forEach(sku => {
       const inStock = parseInt(sku.stock, 10) > 0;
@@ -451,7 +436,7 @@ import Layout1 from '../layouts/Layout1.astro';
     if (!slug) { showError(); return; }
 
     try {
-      const skus = await fetchSheetProducts();
+      const skus = await fetchProducts();
       const grouped = groupProducts(skus);
       const product = grouped.find(gp => gp.slug === slug);
 

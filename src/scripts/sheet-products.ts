@@ -112,7 +112,9 @@ function parseCSV(text: string): SheetProduct[] {
     .filter(p => p.producto);
 }
 
-function fmtCOP(val: string): string {
+export const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+export function fmtCOP(val: string): string {
   const n = parseInt(String(val).replace(/[^\d]/g, ''), 10);
   return isNaN(n) ? val : '$ ' + n.toLocaleString('es-CO');
 }
@@ -132,11 +134,10 @@ const state = {
 // ─── grouped card ─────────────────────────────────────────────────────────────
 
 function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
-  const hasStock = gp.skus.some(s => parseInt(s.stock, 10) > 0);
   const mainColor = gp.colors[0];
 
   const el = document.createElement('a');
-  el.className = `sheet-card${hasStock ? '' : ' oos'}`;
+  el.className = 'sheet-card';
   el.style.animationDelay = `${(i % 12) * 0.05}s`;
 
   const colorDots = gp.colors.map((c, idx) =>
@@ -169,12 +170,11 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
   const initialEl = el.querySelector('.sc-initial') as HTMLElement;
   const badgeEl   = el.querySelector('.sc-badge') as HTMLElement;
   const sizesEl   = el.querySelector('.sc-sizes') as HTMLElement;
-  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   function renderSizes(colorName: string) {
     const skusForColor = gp.skus
       .filter(s => s.color === colorName)
-      .sort((a, b) => sizeOrder.indexOf(a.talla) - sizeOrder.indexOf(b.talla));
+      .sort((a, b) => SIZE_ORDER.indexOf(a.talla) - SIZE_ORDER.indexOf(b.talla));
 
     sizesEl.innerHTML = '';
     skusForColor.forEach(sku => {
@@ -295,11 +295,7 @@ function clearFilters() {
 
 // ─── shared fetch with cache ──────────────────────────────────────────────────
 
-export function fetchSheetProducts(): Promise<SheetProduct[]> {
-  return fetchProducts();
-}
-
-function fetchProducts(): Promise<SheetProduct[]> {
+export function fetchProducts(): Promise<SheetProduct[]> {
   if (_cache) return Promise.resolve(_cache);
   _inflight ??= fetch(SHEET_URL)
     .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
@@ -328,7 +324,7 @@ async function initGrid(gridId: string, limit: number, select: (ps: SheetProduct
 }
 
 export const initHomeCards = (gridId: string, limit = 4) =>
-  initGrid(gridId, limit, ps => ps.filter(p => parseInt(p.stock, 10) > 0).slice(0, limit * 4));
+  initGrid(gridId, limit, ps => ps.filter(p => parseInt(p.stock, 10) > 0));
 
 export const initDropCards = (gridId: string, limit = 2) =>
   initGrid(gridId, limit, ps => ps.slice(-limit * 4));
