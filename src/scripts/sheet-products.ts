@@ -214,7 +214,10 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
     dot.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); updateColor(idx); });
   });
 
-  updateColor(0);
+  const initIdx = state.filters.color
+    ? Math.max(0, gp.colors.findIndex(c => c.name.toLowerCase() === state.filters.color.toLowerCase()))
+    : 0;
+  updateColor(initIdx);
   return el;
 }
 
