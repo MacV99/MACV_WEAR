@@ -93,7 +93,7 @@ import Layout1 from '../layouts/Layout1.astro';
   </section>
 </Layout1>
 
-<style>
+<style is:global>
   .pdp-section {
     background: var(--bg);
     padding: 48px 0 80px;
@@ -347,7 +347,9 @@ import Layout1 from '../layouts/Layout1.astro';
   const DEFAULT_MATERIAL = 'Microfibra premium';
 
   const params = new URLSearchParams(location.search);
-  const slug = params.get('p');
+  const slug      = params.get('p');
+  const preColor  = params.get('color');
+  const preSize   = params.get('size');
 
   const skeletonEl  = document.getElementById('pdp-skeleton')!;
   const contentEl   = document.getElementById('pdp-content')!;
@@ -456,10 +458,10 @@ import Layout1 from '../layouts/Layout1.astro';
       if (!product) { showError(); return; }
 
       currentProduct = product;
-      document.title = `${product.producto} ${product.marca} — MacV Wear`;
+      document.title = `${product.marca} ${product.producto} — MacV Wear`;
 
-      brandEl.textContent   = product.marca;
-      titleEl.textContent   = product.producto;
+      brandEl.textContent    = product.producto;
+      titleEl.textContent    = product.marca;
       subtitleEl.textContent = product.colors.map(c => c.name).join(' · ');
       priceEl.textContent   = fmtCOP(product.precio);
       materialEl.textContent = DEFAULT_MATERIAL;
@@ -490,7 +492,18 @@ import Layout1 from '../layouts/Layout1.astro';
         swatchesEl.appendChild(btn);
       });
 
-      updateGallery(0);
+      // pre-select color from URL param
+      const initColorIdx = preColor
+        ? Math.max(0, product.colors.findIndex(c => c.name.toLowerCase() === preColor.toLowerCase()))
+        : 0;
+      updateGallery(initColorIdx);
+
+      // pre-select size from URL param
+      if (preSize) {
+        const pill = [...sizesEl.querySelectorAll<HTMLButtonElement>('.size-pill:not(.oos)')]
+          .find(p => p.dataset.size?.toLowerCase() === preSize.toLowerCase());
+        pill?.click();
+      }
 
       // qty
       document.getElementById('qty-dec')!.addEventListener('click', () => {

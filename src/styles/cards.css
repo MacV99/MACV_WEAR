@@ -110,6 +110,45 @@
   border-radius: 50%;
   border: 1.5px solid rgba(10, 9, 8, 0.2);
   flex-shrink: 0;
+  cursor: pointer;
+  transition: outline 0.1s ease;
+}
+
+.sc-colordot.active {
+  outline: 1.5px solid var(--carbon-900);
+  outline-offset: 1.5px;
+}
+
+.sc-sizes {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.sc-size {
+  font-family: var(--font-display-alt);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 7px;
+  border: 1px solid var(--carbon-900);
+  color: var(--carbon-900);
+  cursor: pointer;
+  background: transparent;
+  user-select: none;
+  transition: var(--transition);
+}
+
+.sc-size.active {
+  background: var(--carbon-900);
+  color: var(--bone-50);
+}
+
+.sc-size.oos {
+  opacity: 0.3;
+  text-decoration: line-through;
+  cursor: default;
+  pointer-events: none;
 }
 
 /* ── filter chips (tienda — creados por JS) ── */
@@ -194,5 +233,9 @@
   .filter-chip:hover:not(.active) {
     border-color: var(--carbon-900);
     color: var(--carbon-900);
+  }
+
+  .sc-size:not(.oos):not(.active):hover {
+    background: var(--bone-200);
   }
 }

@@ -132,25 +132,23 @@ const state = {
 // ─── grouped card ─────────────────────────────────────────────────────────────
 
 function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
-  const mainHex = gp.colors[0]?.hex ?? '#6B655C';
   const hasStock = gp.skus.some(s => parseInt(s.stock, 10) > 0);
+  const mainColor = gp.colors[0];
+
   const el = document.createElement('a');
   el.className = `sheet-card${hasStock ? '' : ' oos'}`;
-  el.href = `/producto?p=${gp.slug}`;
   el.style.animationDelay = `${(i % 12) * 0.05}s`;
 
-  const colorDots = gp.colors.map(c =>
-    `<span class="sc-colordot" style="background:${c.hex}" title="${c.name}"></span>`
+  const colorDots = gp.colors.map((c, idx) =>
+    `<span class="sc-colordot${idx === 0 ? ' active' : ''}" style="background:${c.hex}" title="${c.name}"></span>`
   ).join('');
 
   el.innerHTML = `
-    <div class="sc-visual" style="background:linear-gradient(150deg,${mainHex}44 0%,${mainHex}18 100%);">
-      ${gp.imagen
-        ? `<img class="sc-img" src="${gp.imagen}" alt="${gp.producto}" loading="lazy"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-        : ''
-      }
-      <span class="sc-initial"${gp.imagen ? ' style="display:none"' : ''}>${(gp.marca || gp.producto || 'M')[0].toUpperCase()}</span>
+    <div class="sc-visual" style="background:linear-gradient(150deg,${mainColor.hex}44 0%,${mainColor.hex}18 100%);">
+      <img class="sc-img" src="${mainColor.imagen || ''}" alt="${gp.producto}" loading="lazy"
+           ${!mainColor.imagen ? 'style="display:none"' : ''}
+           onerror="this.style.display='none'">
+      <span class="sc-initial"${mainColor.imagen ? ' style="display:none"' : ''}>${(gp.marca || gp.producto || 'M')[0].toUpperCase()}</span>
       ${!hasStock ? '<span class="badge blood sc-badge">Agotado</span>' : ''}
     </div>
     <div class="sc-info">
@@ -162,8 +160,61 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
         <span class="sc-sub">${gp.producto}</span>
         <div class="sc-colordots">${colorDots}</div>
       </div>
+      <div class="sc-sizes"></div>
     </div>
   `;
+
+  const visualEl  = el.querySelector('.sc-visual') as HTMLElement;
+  const imgEl     = el.querySelector('.sc-img') as HTMLImageElement;
+  const initialEl = el.querySelector('.sc-initial') as HTMLElement;
+  const sizesEl   = el.querySelector('.sc-sizes') as HTMLElement;
+  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+  function renderSizes(colorName: string) {
+    const skusForColor = gp.skus
+      .filter(s => s.color === colorName)
+      .sort((a, b) => sizeOrder.indexOf(a.talla) - sizeOrder.indexOf(b.talla));
+
+    sizesEl.innerHTML = '';
+    skusForColor.forEach(sku => {
+      const inStock = parseInt(sku.stock, 10) > 0;
+      const isActive = inStock && state.filters.size &&
+        sku.talla.toLowerCase() === state.filters.size.toLowerCase();
+      const span = document.createElement('span');
+      span.className = `sc-size${!inStock ? ' oos' : ''}${isActive ? ' active' : ''}`;
+      span.textContent = sku.talla;
+      if (inStock) {
+        span.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          location.href = `/producto?p=${gp.slug}&color=${encodeURIComponent(colorName)}&size=${encodeURIComponent(sku.talla)}`;
+        });
+      }
+      sizesEl.appendChild(span);
+    });
+  }
+
+  function updateColor(idx: number) {
+    const c = gp.colors[idx];
+    visualEl.style.background = `linear-gradient(150deg,${c.hex}44 0%,${c.hex}18 100%)`;
+    if (c.imagen) {
+      imgEl.src = c.imagen;
+      imgEl.style.display = '';
+      initialEl.style.display = 'none';
+    } else {
+      imgEl.style.display = 'none';
+      initialEl.style.display = '';
+    }
+    el.querySelectorAll('.sc-colordot').forEach((dot, j) => dot.classList.toggle('active', j === idx));
+    el.href = `/producto?p=${gp.slug}&color=${encodeURIComponent(c.name)}`;
+    renderSizes(c.name);
+  }
+
+  el.querySelectorAll('.sc-colordot').forEach((dot, idx) => {
+    dot.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); updateColor(idx); });
+  });
+
+  updateColor(0);
   return el;
 }
 
