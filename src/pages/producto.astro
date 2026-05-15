@@ -38,8 +38,10 @@ import Layout1 from '../layouts/Layout1.astro';
           <p class="pdp-subtitle" id="pdp-subtitle"></p>
         </div>
 
-        <span class="pdp-price" id="pdp-price"></span>
-
+        <div class="pdp-price-row flex-row">
+          <span class="pdp-price" id="pdp-price"></span>
+          <span class="badge blood" id="pdp-oos-badge" hidden>Agotado</span>
+        </div>
 
         <div class="option-group flex-column">
           <div class="option-label flex-row">
@@ -202,6 +204,11 @@ import Layout1 from '../layouts/Layout1.astro';
     color: var(--carbon-300);
   }
 
+  .pdp-price-row {
+    align-items: center;
+    gap: 12px;
+  }
+
   .pdp-price {
     font-family: var(--font-display-alt);
     font-size: 28px;
@@ -359,6 +366,7 @@ import Layout1 from '../layouts/Layout1.astro';
   const materialEl  = document.getElementById('pdp-material')!;
   const descEl      = document.getElementById('pdp-desc')!;
   const addBtn      = document.getElementById('pdp-add-btn') as HTMLButtonElement;
+  const oosBadge    = document.getElementById('pdp-oos-badge') as HTMLElement;
   const galleryMain = document.getElementById('pdp-gallery-main')!;
   const thumbsEl    = document.getElementById('pdp-thumbs')!;
   const qtyInput    = document.getElementById('qty-input') as HTMLInputElement;
@@ -400,6 +408,9 @@ import Layout1 from '../layouts/Layout1.astro';
     const sizesForColor = currentProduct.skus
       .filter(s => s.color === colorName)
       .sort((a, b) => SIZE_ORDER.indexOf(a.talla) - SIZE_ORDER.indexOf(b.talla));
+
+    const colorInStock = sizesForColor.some(s => parseInt(s.stock, 10) > 0);
+    oosBadge.hidden = colorInStock;
 
     sizesForColor.forEach(sku => {
       const inStock = parseInt(sku.stock, 10) > 0;
