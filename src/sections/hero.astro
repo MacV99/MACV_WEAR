@@ -1,11 +1,12 @@
 ---
+import Eyebrow from '../components/Eyebrow.astro';
 ---
 
 <section class="hero-section">
   <div class="container hero-inner">
 
     <div class="hero-text">
-      <span class="hero-eyebrow">Drop 03 · Edición Limitada</span>
+      <Eyebrow variant="accent">Drop 03 · Edición Limitada</Eyebrow>
       <h1 class="hero-title">Bóxers<br />que no te<br />fallan.</h1>
       <p class="hero-subtitle">Microfibra 100%, costuras planas, elástico jacquard.<br />Fit honesto que aguanta el día.</p>
       <div class="hero-actions flex-row">
@@ -40,15 +41,6 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 24px;
-  }
-
-  .hero-eyebrow {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--blood-600);
   }
 
   .hero-title {

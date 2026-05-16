@@ -1,18 +1,14 @@
 ---
+import '../styles/cards.css';
+import SectionHeader from '../components/SectionHeader.astro';
+import UrgencyWidget from '../components/UrgencyWidget.astro';
 ---
 
 <section class="drop-section">
   <div class="container">
-    <div class="drop-header flex-row">
-      <div class="flex-column drop-header-left">
-        <span class="eyebrow">Edición limitada</span>
-        <h2 class="drop-title">Lo nuevo</h2>
-      </div>
-      <div class="drop-urgency flex-row">
-        <span class="urgency-dot" aria-hidden="true"></span>
-        <span class="urgency-text">Últimas unidades</span>
-      </div>
-    </div>
+    <SectionHeader class="drop-header" eyebrow="Edición limitada" title="Lo nuevo" dark>
+      <UrgencyWidget />
+    </SectionHeader>
     <p class="drop-description">
       Los más recientes. Una vez que se acaben, no vuelven.
     </p>
@@ -28,53 +24,7 @@
   }
 
   .drop-header {
-    justify-content: space-between;
-    align-items: flex-end;
     margin-bottom: 16px;
-  }
-
-  .drop-header-left {
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--blood-600);
-  }
-
-  .drop-title {
-    font-family: var(--font-display);
-    font-size: clamp(28px, 5vw, 44px);
-    line-height: 0.95;
-    color: var(--bone-50);
-    letter-spacing: -0.01em;
-  }
-
-  .drop-urgency {
-    gap: 8px;
-  }
-
-  .urgency-dot {
-    width: 8px;
-    height: 8px;
-    background: var(--blood-600);
-    border-radius: 50%;
-    animation: pulse 1.8s ease-in-out infinite;
-    flex-shrink: 0;
-  }
-
-  .urgency-text {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--carbon-300);
   }
 
   .drop-description {
@@ -89,11 +39,6 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     min-height: 200px;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.3; }
   }
 
   @media (min-width: 750px) {

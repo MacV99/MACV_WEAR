@@ -1,11 +1,13 @@
 ---
 import Layout1 from '../layouts/Layout1.astro';
+import '../styles/cards.css';
+import Eyebrow from '../components/Eyebrow.astro';
 ---
 
 <Layout1 title="Tienda — MacV Wear">
   <section class="tienda-hero">
     <div class="container flex-column tienda-hero-inner">
-      <span class="eyebrow">Toda la colección</span>
+      <Eyebrow>Toda la colección</Eyebrow>
       <h1 class="tienda-title">La Tienda</h1>
     </div>
   </section>
@@ -28,7 +30,7 @@ import Layout1 from '../layouts/Layout1.astro';
         </button>
       </div>
 
-      <div id="tienda-filters" class="tienda-filters">
+      <div id="tienda-filters" class="tienda-filters flex-column">
         <div class="filter-group">
           <span class="filter-label">Marca</span>
           <div id="filter-brand" class="filter-chips-row"></div>
@@ -73,15 +75,6 @@ import Layout1 from '../layouts/Layout1.astro';
   .tienda-hero-inner {
     align-items: flex-start;
     gap: 8px;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--carbon-300);
   }
 
   .tienda-title {
@@ -138,8 +131,8 @@ import Layout1 from '../layouts/Layout1.astro';
 
   /* ── filters ── */
   .tienda-filters {
-    display: flex;
-    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 14px;
     padding-bottom: 20px;
   }
@@ -220,6 +213,35 @@ import Layout1 from '../layouts/Layout1.astro';
   }
 </style>
 
+
+<style is:global>
+  .filter-chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    background: transparent;
+    color: var(--carbon-500);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .filter-chip.active {
+    background: var(--carbon-900);
+    color: var(--bone-50);
+    border-color: var(--carbon-900);
+  }
+
+  @media (hover: hover) {
+    .filter-chip:hover:not(.active) {
+      border-color: var(--carbon-900);
+      color: var(--carbon-900);
+    }
+  }
+</style>
 
 <script>
   import { initSheetProducts } from '../scripts/sheet-products.ts';

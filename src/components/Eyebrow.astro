@@ -1,0 +1,25 @@
+---
+interface Props {
+  variant?: 'default' | 'accent';
+}
+const { variant = 'default' } = Astro.props;
+---
+
+<span class:list={['eyebrow', { accent: variant === 'accent' }]}>
+  <slot />
+</span>
+
+<style>
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  .eyebrow.accent {
+    color: var(--blood-600);
+  }
+</style>

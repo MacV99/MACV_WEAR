@@ -152,28 +152,6 @@
   pointer-events: none;
 }
 
-/* ── filter chips (tienda — creados por JS) ── */
-
-.filter-chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  background: transparent;
-  color: var(--carbon-500);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.filter-chip.active {
-  background: var(--carbon-900);
-  color: var(--bone-50);
-  border-color: var(--carbon-900);
-}
-
 /* ── Skeleton ── */
 
 .sk-card {
@@ -236,11 +214,6 @@
 @media (hover: hover) {
   .sheet-card:hover {
     box-shadow: var(--shadow-sm);
-  }
-
-  .filter-chip:hover:not(.active) {
-    border-color: var(--carbon-900);
-    color: var(--carbon-900);
   }
 
   .sc-size:not(.oos):not(.active):hover {

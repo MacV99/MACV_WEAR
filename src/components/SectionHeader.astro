@@ -1,0 +1,43 @@
+---
+import Eyebrow from './Eyebrow.astro';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  dark?: boolean;
+  class?: string;
+}
+const { eyebrow, title, dark = false, class: className } = Astro.props;
+---
+
+<div class:list={['section-header', 'flex-row', { dark }, className]}>
+  <div class="flex-column header-text">
+    <Eyebrow variant={dark ? 'accent' : 'default'}>{eyebrow}</Eyebrow>
+    <h2 class="section-title">{title}</h2>
+  </div>
+  <slot />
+</div>
+
+<style>
+  .section-header {
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .header-text {
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 0.95;
+    color: var(--carbon-900);
+    letter-spacing: -0.01em;
+  }
+
+  .section-header.dark .section-title {
+    color: var(--bone-50);
+  }
+</style>

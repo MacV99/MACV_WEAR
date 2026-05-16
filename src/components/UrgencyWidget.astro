@@ -1,0 +1,40 @@
+---
+interface Props {
+  text?: string;
+}
+const { text = 'Últimas unidades' } = Astro.props;
+---
+
+<div class="urgency flex-row">
+  <span class="dot" aria-hidden="true"></span>
+  <span class="label">{text}</span>
+</div>
+
+<style>
+  .urgency {
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--blood-600);
+    border-radius: 50%;
+    animation: pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--carbon-300);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
