@@ -11,11 +11,13 @@ export interface CartItem {
   size: string;
   price: number;
   qty: number;
+  maxStock: number;
 }
 
 const STORAGE_KEY = 'macv-cart';
-const SHIPPING_THRESHOLD = 80000;
-const SHIPPING_COST = 9900;
+const BULK_MIN_QTY = 2;
+const BULK_PRICE   = 25000;
+const UNIT_PRICE   = 30000;
 
 function load(): CartItem[] {
   try {
@@ -44,11 +46,14 @@ export const MacVCart = {
   },
 
   getSubtotal(): number {
-    return load().reduce((s, i) => s + i.price * i.qty, 0);
+    const items = load();
+    const totalQty = items.reduce((n, i) => n + i.qty, 0);
+    const unitPrice = totalQty >= BULK_MIN_QTY ? BULK_PRICE : UNIT_PRICE;
+    return totalQty * unitPrice;
   },
 
   getShipping(): number {
-    return this.getSubtotal() >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+    return 0;
   },
 
   getTotal(): number {
@@ -60,9 +65,9 @@ export const MacVCart = {
     const id = makeId(item);
     const existing = items.find(i => i.id === id);
     if (existing) {
-      existing.qty += item.qty;
+      existing.qty = Math.min(existing.qty + item.qty, existing.maxStock);
     } else {
-      items.push({ ...item, id });
+      items.push({ ...item, id, qty: Math.min(item.qty, item.maxStock) });
     }
     save(items);
   },
@@ -75,7 +80,7 @@ export const MacVCart = {
     if (qty < 1) { this.remove(id); return; }
     const items = load();
     const item = items.find(i => i.id === id);
-    if (item) { item.qty = qty; save(items); }
+    if (item) { item.qty = Math.min(qty, item.maxStock); save(items); }
   },
 
   clear(): void {

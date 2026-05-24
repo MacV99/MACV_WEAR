@@ -27,7 +27,7 @@
     </div>
     <div class="cost-row flex-row">
       <span class="cost-label">Envío</span>
-      <span id="cart-shipping" class="cost-value">$9.900</span>
+      <span id="cart-shipping" class="cost-value">Gratis</span>
     </div>
     <div class="cost-row total flex-row">
       <span class="cost-label">Total</span>
@@ -287,6 +287,15 @@
     padding: 0;
   }
 
+  .stock-max-msg {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--clr-accent);
+    text-align: right;
+  }
+
   .item-color-dot {
     width: 12px;
     height: 12px;
@@ -340,9 +349,10 @@
         <div class="cart-item-actions">
           <div class="qty-stepper">
             <button class="qty-btn" data-id="${item.id}" data-action="dec">−</button>
-            <input class="qty-input" type="number" min="1" max="10" value="${item.qty}" data-id="${item.id}" />
-            <button class="qty-btn" data-id="${item.id}" data-action="inc">+</button>
+            <input class="qty-input" type="number" min="1" max="${item.maxStock}" value="${item.qty}" data-id="${item.id}" />
+            <button class="qty-btn" data-id="${item.id}" data-action="inc" ${item.qty >= item.maxStock ? 'disabled' : ''}>+</button>
           </div>
+          ${item.qty >= item.maxStock ? '<span class="stock-max-msg">Stock máximo</span>' : ''}
           <button class="remove-btn" data-id="${item.id}">Eliminar</button>
         </div>
       `;
@@ -384,7 +394,9 @@
     } else if (target.classList.contains('qty-btn')) {
       const item = window.MacVCart.getItems().find(i => i.id === id);
       if (!item) return;
-      const delta = target.dataset.action === 'inc' ? 1 : -1;
+      const isInc = target.dataset.action === 'inc';
+      if (isInc && item.qty >= item.maxStock) return;
+      const delta = isInc ? 1 : -1;
       window.MacVCart.updateQty(id, item.qty + delta);
     }
   });
