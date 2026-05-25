@@ -56,6 +56,7 @@ import Layout1 from '../layouts/Layout1.astro';
           <div class="option-label flex-row">
             <span class="option-key">Talla</span>
             <span class="option-val" id="pdp-size-name">—</span>
+            <button class="size-guide-btn" id="size-guide-open" type="button">Guía de tallas</button>
           </div>
           <div class="size-pills flex-row" id="pdp-sizes"></div>
         </div>
@@ -85,6 +86,14 @@ import Layout1 from '../layouts/Layout1.astro';
     </div>
 
 
+    <!-- Modal guía de tallas -->
+    <div class="size-guide-overlay" id="size-guide-modal" hidden aria-modal="true" role="dialog" aria-label="Guía de tallas">
+      <div class="size-guide-box">
+        <button class="size-guide-close" id="size-guide-close" type="button" aria-label="Cerrar">✕</button>
+        <img src="/img/Guia%20de%20Tallas.avif" alt="Guía de tallas MacV Wear" class="size-guide-img" />
+      </div>
+    </div>
+
     <div class="container" id="pdp-error" hidden>
       <div class="pdp-error-box flex-column">
         <p>No encontramos este producto.</p>
@@ -97,7 +106,7 @@ import Layout1 from '../layouts/Layout1.astro';
 <style is:global>
   .pdp-section {
     background: var(--bg);
-    padding: 48px 0 80px;
+    padding: 32px 0 64px;
   }
 
   .pdp-grid {
@@ -175,7 +184,7 @@ import Layout1 from '../layouts/Layout1.astro';
   .thumb.active { border: 2px solid var(--carbon-900); }
 
   /* ── INFO ── */
-  .pdp-info { align-items: flex-start; gap: 24px; }
+  .pdp-info { align-items: flex-start; gap: 16px; }
   .pdp-top { align-items: flex-start; gap: 6px; }
 
   .pdp-brand {
@@ -327,6 +336,89 @@ import Layout1 from '../layouts/Layout1.astro';
     width: 100%;
   }
 
+  /* ── Guía de tallas ── */
+  .size-guide-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--carbon-400);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-left: auto;
+    transition: color 0.12s ease;
+  }
+
+  .size-guide-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .size-guide-overlay[hidden] { display: none; }
+
+  .size-guide-box {
+    position: relative;
+    background: var(--bone-50);
+    max-width: 820px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--carbon-900) transparent;
+  }
+
+  .size-guide-box::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .size-guide-box::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .size-guide-box::-webkit-scrollbar-thumb {
+    background: var(--carbon-900);
+  }
+
+  .size-guide-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--carbon-900);
+    color: var(--bone-50);
+    border: none;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: opacity 0.12s ease;
+  }
+
+  .size-guide-img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  @media (hover: hover) {
+    .size-guide-btn:hover { color: var(--carbon-900); }
+    .size-guide-close:hover { opacity: 0.75; }
+  }
+
   .pdp-error-box {
     align-items: center;
     gap: 20px;
@@ -343,8 +435,8 @@ import Layout1 from '../layouts/Layout1.astro';
 
   @media (min-width: 750px) {
     .pdp-grid {
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 56px;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 48px;
     }
   }
 </style>
@@ -354,6 +446,26 @@ import Layout1 from '../layouts/Layout1.astro';
 
   const DEFAULT_DESC = 'Diseño premium con acabados de alta calidad. Confeccionado para durar y para sentirte bien todo el día, sin compromisos.';
   const DEFAULT_MATERIAL = 'Microfibra premium';
+
+  // Descripción y material por producto (clave = product.producto en minúsculas, parcial)
+  const PRODUCT_CATALOG: Record<string, { desc: string; material: string }> = {
+    boxer: {
+      desc: 'Boxer largo a media pierna con costuras reforzadas de alta calidad. Garantizamos que el producto recibido será idéntico al de la foto.',
+      material: 'Micro Fibra · 94% Algodón / 6% Elastómero · Goma 4.5 cm',
+    },
+    medias: {
+      desc: 'Medias deportivas con ajuste firme y ligera compresión para mayor estabilidad y comodidad. Tejido fresco que mantiene el pie bien ajustado y seguro durante el día.',
+      material: 'Talla única · Ajuste deportivo · Sensación fresca y cómoda',
+    },
+  };
+
+  function getProductData(productoName: string): { desc: string; material: string } {
+    const key = productoName.toLowerCase();
+    for (const [k, v] of Object.entries(PRODUCT_CATALOG)) {
+      if (key.includes(k)) return v;
+    }
+    return { desc: DEFAULT_DESC, material: DEFAULT_MATERIAL };
+  }
 
   const params = new URLSearchParams(location.search);
   const slug      = params.get('p');
@@ -483,8 +595,9 @@ import Layout1 from '../layouts/Layout1.astro';
       titleEl.textContent    = product.marca;
       subtitleEl.textContent = product.colors.map(c => c.name).join(' · ');
       priceEl.textContent   = fmtCOP(product.precio);
-      materialEl.textContent = DEFAULT_MATERIAL;
-      descEl.textContent    = DEFAULT_DESC;
+      const productData = getProductData(product.producto);
+      materialEl.textContent = productData.material;
+      descEl.textContent    = productData.desc;
 
       // thumbnails
       thumbsEl.innerHTML = '';
@@ -568,6 +681,24 @@ import Layout1 from '../layouts/Layout1.astro';
     skeletonEl.hidden = true;
     errorEl.hidden = false;
   }
+
+  // ── Guía de tallas ──
+  const sizeGuideModal = document.getElementById('size-guide-modal')!;
+  document.getElementById('size-guide-open')!.addEventListener('click', () => {
+    sizeGuideModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  });
+  const closeSizeGuide = () => {
+    sizeGuideModal.hidden = true;
+    document.body.style.overflow = '';
+  };
+  document.getElementById('size-guide-close')!.addEventListener('click', closeSizeGuide);
+  sizeGuideModal.addEventListener('click', (e) => {
+    if (e.target === sizeGuideModal) closeSizeGuide();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !sizeGuideModal.hidden) closeSizeGuide();
+  });
 
   init();
 </script>

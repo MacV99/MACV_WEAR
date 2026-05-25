@@ -3,6 +3,21 @@
   padding: 0;
   box-sizing: border-box;
   font-family: var(--font-body, 'Archivo', sans-serif);
+  scrollbar-width: thin;
+  scrollbar-color: var(--carbon-900) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--carbon-900);
 }
 
 [hidden] { display: none !important; }
