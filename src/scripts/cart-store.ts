@@ -45,11 +45,19 @@ export const MacVCart = {
     return load().reduce((n, i) => n + i.qty, 0);
   },
 
+  getRegularSubtotal(): number {
+    return load().reduce((n, i) => n + i.qty, 0) * UNIT_PRICE;
+  },
+
   getSubtotal(): number {
     const items = load();
     const totalQty = items.reduce((n, i) => n + i.qty, 0);
     const unitPrice = totalQty >= BULK_MIN_QTY ? BULK_PRICE : UNIT_PRICE;
     return totalQty * unitPrice;
+  },
+
+  getDiscount(): number {
+    return this.getRegularSubtotal() - this.getSubtotal();
   },
 
   getShipping(): number {
