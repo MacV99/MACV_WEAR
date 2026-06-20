@@ -1,0 +1,980 @@
+---
+import '../styles/global.css';
+import '../styles/project.css';
+import { API_URL } from '../scripts/admin-config';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Panel — MacV Wear</title>
+    <link rel="icon" type="image/avif" href="/img/logo-mark.avif" />
+    <link rel="apple-touch-icon" href="/img/logo-mark.avif" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  </head>
+  <body>
+    <!-- LOGIN -->
+    <div id="login" class="login">
+      <form id="login-form" class="login-card">
+        <span class="login-mark"><img src="/img/logo-mark.avif" alt="MacV Wear" width="76" height="76" /></span>
+        <div class="login-logo">MacV<span>·</span>Panel</div>
+        <p class="login-sub">Gestión de inventario y ventas</p>
+        <div class="login-field">
+          <i class="bi bi-lock-fill login-field-ico"></i>
+          <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
+          <button type="button" id="login-eye" class="login-eye" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye-fill"></i></button>
+        </div>
+        <button type="submit" class="btn-primary login-btn">Entrar <i class="bi bi-arrow-right-short"></i></button>
+        <span id="login-err" class="login-err" hidden><i class="bi bi-exclamation-circle-fill"></i> <span></span></span>
+      </form>
+    </div>
+
+    <!-- APP -->
+    <div id="app" class="app" hidden>
+      <header class="topbar">
+        <div class="brand">MacV<span>·</span>Panel</div>
+        <div class="topbar-actions">
+          <button id="btn-refresh" class="icon-btn" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+          <button id="btn-logout" class="icon-btn" title="Salir"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis" id="kpis"></section>
+
+      <!-- TABS -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="ventas"><i class="bi bi-receipt"></i> Ventas</button>
+        <button class="tab" data-tab="inventario"><i class="bi bi-box-seam"></i> Inventario</button>
+        <button class="tab" data-tab="nuevo"><i class="bi bi-plus-square"></i> Nuevo</button>
+      </nav>
+
+      <main class="content">
+        <!-- INVENTARIO -->
+        <section class="panel" data-panel="inventario">
+          <div class="panel-head">
+            <h2>Inventario</h2>
+            <input id="inv-search" class="field search" type="search" placeholder="Buscar…" />
+          </div>
+          <div id="inv-body" class="card-list"></div>
+        </section>
+
+        <!-- NUEVO -->
+        <section class="panel" data-panel="nuevo">
+          <div class="panel-head"><h2>Nuevo producto</h2></div>
+          <form id="form-nuevo" class="form-grid">
+            <label>Producto <input name="producto" class="field" placeholder="Boxer" required /></label>
+            <label>Marca <input name="marca" class="field" placeholder="Nike" required /></label>
+            <label>Color <input name="color" class="field" placeholder="Negro" required /></label>
+            <label>Talla <input name="talla" class="field" placeholder="XL" required /></label>
+            <label>Precio tienda <input name="precio" class="field" type="number" placeholder="30000" required /></label>
+            <label>Stock inicial <input name="stock_inicial" class="field" type="number" placeholder="10" required /></label>
+            <label>Categoría <input name="categoria" class="field" placeholder="Ropa interior" /></label>
+            <label class="wide">Imagen (URL) <input name="imagen" class="field" placeholder="https://…" /></label>
+            <button type="submit" class="btn-primary wide">Crear producto</button>
+          </form>
+        </section>
+
+        <!-- VENTAS -->
+        <section class="panel active" data-panel="ventas">
+          <div class="panel-head">
+            <h2>Ventas</h2>
+            <button id="btn-add-venta" class="btn-primary"><i class="bi bi-plus-lg"></i> Agregar venta</button>
+          </div>
+          <input id="ventas-search" class="field search wide-search" type="search" placeholder="Buscar cliente, producto…" />
+          <div id="ventas-body" class="card-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="modal-root" class="modal-root"></div>
+    <div id="pill" class="pill"></div>
+
+    <script define:vars={{ API_URL }}>
+      // ─── estado ────────────────────────────────────────────────────────────
+      const SS_PASS = 'macv_admin_pass';
+      let PASS = sessionStorage.getItem(SS_PASS) || '';
+      let DATA = { productos: [], ventas: [] };
+      let cart = [];
+
+      const $ = (s, r = document) => r.querySelector(s);
+      const fmt = (n) => '$ ' + (Number(n) || 0).toLocaleString('es-CO');
+      const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const keyOf = (p) => `${p.producto}|${p.marca}|${p.color}|${p.talla}`;
+      const thumb = (p) => p.imagen
+        ? `<img src="${esc(p.imagen)}" alt="${esc(p.marca)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'thumb-fb',textContent:'${esc((p.marca || p.producto || 'M')[0].toUpperCase())}'}))">`
+        : `<span class="thumb-fb">${esc((p.marca || p.producto || 'M')[0].toUpperCase())}</span>`;
+
+      // ─── red ───────────────────────────────────────────────────────────────
+      // Log con marca de tiempo para depurar en la consola del navegador.
+      const log  = (...a) => console.log('%c[MacV]', 'color:#B0291F;font-weight:700', ...a);
+      const logErr = (label, err, extra) => console.error('%c[MacV] ✗ ' + label, 'color:#B0291F;font-weight:700', err, extra || '');
+
+      function fetchJSONP(url) {
+        return new Promise((resolve, reject) => {
+          const cb = '_cb_' + Date.now() + Math.floor(Math.random() * 1e4);
+          const script = document.createElement('script');
+          const t0 = performance.now();
+          const timer = setTimeout(() => { cleanup(); logErr('GET timeout (15s)', url); reject(new Error('Tiempo de espera agotado (red lenta o URL mala)')); }, 15000);
+          function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
+          window[cb] = (d) => { cleanup(); log('GET ok', `${Math.round(performance.now() - t0)}ms`, d); resolve(d); };
+          script.onerror = () => { cleanup(); logErr('GET load failed', url); reject(new Error('No cargó el script (revisa la URL del GAS)')); };
+          script.src = `${url}?callback=${cb}&_=${Date.now()}`;
+          document.head.appendChild(script);
+        });
+      }
+
+      async function post(payload) {
+        const t0 = performance.now();
+        log('POST →', payload.action, payload);
+        let res, raw, json;
+        try {
+          res = await fetch(API_URL, {
+            method: 'POST', mode: 'cors', redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ ...payload, password: PASS }),
+          });
+          raw = await res.text();
+        } catch (netErr) {
+          logErr('POST red caída', netErr, { action: payload.action });
+          throw new Error('Falló la conexión con el script (red o CORS)');
+        }
+        try { json = JSON.parse(raw); } catch { json = {}; }
+        if (!res.ok || !json.ok) {
+          logErr('POST rechazado', json.error || `HTTP ${res.status}`, { action: payload.action, status: res.status, raw: raw.slice(0, 300) });
+          throw new Error(json.error || `HTTP ${res.status}`);
+        }
+        log('POST ok', payload.action, `${Math.round(performance.now() - t0)}ms`, json);
+        if (json.data) DATA = json.data;
+        return json;
+      }
+
+      // ─── pill ──────────────────────────────────────────────────────────────
+      function pill(msg, type = 'ok') {
+        const el = $('#pill');
+        el.textContent = msg;
+        el.className = 'pill show ' + type;
+        clearTimeout(el._t);
+        el._t = setTimeout(() => el.classList.remove('show'), 2600);
+      }
+
+      // ─── login ─────────────────────────────────────────────────────────────
+      // Valida la clave de verdad (POST ping). Si el script aún no tiene 'ping'
+      // (deploy viejo) y la clave es correcta, devuelve "Acción desconocida" →
+      // eso confirma que la clave pasó, así que entramos igual.
+      async function validarClave() {
+        try { await post({ action: 'ping' }); }
+        catch (e) { if (!/desconocida/i.test(e.message)) throw e; }
+      }
+
+      async function entrar() {
+        await validarClave();          // lanza si la clave es incorrecta
+        await loadData();
+        sessionStorage.setItem(SS_PASS, PASS);
+        $('#login').hidden = true;
+        $('#app').hidden = false;
+        renderAll();
+      }
+
+      $('#login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        PASS = $('#login-pass').value.trim();
+        const err = $('#login-err');
+        const btn = e.target.querySelector('button');
+        err.hidden = true; btn.disabled = true; btn.textContent = 'Entrando…';
+        try {
+          await entrar();
+        } catch (e2) {
+          err.querySelector('span').textContent = /clave/i.test(e2.message) ? 'Clave incorrecta.' : 'No se pudo conectar. Revisa la URL del script.';
+          err.hidden = false;
+        } finally { btn.disabled = false; btn.innerHTML = 'Entrar <i class="bi bi-arrow-right-short"></i>'; }
+      });
+
+      // Mostrar / ocultar contraseña.
+      $('#login-eye').addEventListener('click', () => {
+        const inp = $('#login-pass');
+        const mostrar = inp.type === 'password';
+        inp.type = mostrar ? 'text' : 'password';
+        $('#login-eye').firstElementChild.className = mostrar ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill';
+        inp.focus();
+      });
+
+      $('#btn-logout').addEventListener('click', () => {
+        sessionStorage.removeItem(SS_PASS);
+        location.reload();
+      });
+      $('#btn-refresh').addEventListener('click', async () => {
+        await loadData(); renderAll(); pill('Actualizado');
+      });
+
+      // ─── carga ─────────────────────────────────────────────────────────────
+      async function loadData() {
+        const r = await fetchJSONP(API_URL);
+        if (!r.ok) throw new Error(r.error || 'Error');
+        DATA = { productos: r.productos || [], ventas: r.ventas || [] };
+      }
+
+      // helper: POST + refresh + feedback en un paso
+      async function submit(payload, okMsg) {
+        try { await post(payload); renderAll(); pill(okMsg || 'Listo ✓'); return true; }
+        catch (err) {
+          logErr(`acción "${payload.action}" falló`, err.message, payload);
+          const hint = /desconocida/i.test(err.message) ? ' — re-despliega el script' : '';
+          pill(err.message + hint, 'err');
+          return false;
+        }
+      }
+
+      // ─── modales ─────────────────────────────────────────────────────────────
+      function closeModal() {
+        const root = $('#modal-root');
+        root.innerHTML = '';
+        root.classList.remove('open');
+        document.removeEventListener('keydown', modalEsc);
+      }
+      function modalEsc(e) { if (e.key === 'Escape') { const root = $('#modal-root'); if (root._reject) root._reject(); closeModal(); } }
+
+      function mountModal(innerHTML) {
+        const root = $('#modal-root');
+        root.innerHTML = `<div class="modal-backdrop"></div><div class="modal" role="dialog" aria-modal="true">${innerHTML}</div>`;
+        root.classList.add('open');
+        document.addEventListener('keydown', modalEsc);
+        root.querySelector('.modal-backdrop').addEventListener('click', () => { if (root._reject) root._reject(); closeModal(); });
+        return root;
+      }
+
+      // Form modal → resuelve con {campo:valor} o null si se cancela.
+      function modalForm(opts) {
+        return new Promise((resolve) => {
+          const fieldsHTML = opts.fields.map((f) => {
+            if (f.type === 'select') {
+              const opts2 = f.options.map((o) => `<option value="${esc(o)}" ${o === f.value ? 'selected' : ''}>${esc(o)}</option>`).join('');
+              return `<label class="mfield">${esc(f.label)}<select name="${f.name}" class="field">${opts2}</select></label>`;
+            }
+            return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min ? `min="${f.min}"` : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
+          }).join('');
+          const root = mountModal(`
+            <div class="modal-head"><h3>${esc(opts.title)}</h3>${opts.subtitle ? `<p class="modal-sub">${esc(opts.subtitle)}</p>` : ''}</div>
+            <form class="modal-body" id="modal-form">${fieldsHTML}</form>
+            <div class="modal-foot">
+              <button class="btn-ghost" type="button" data-x>Cancelar</button>
+              <button class="btn-primary ${opts.danger ? 'danger' : ''}" type="submit" form="modal-form">${esc(opts.confirm || 'Guardar')}</button>
+            </div>`);
+          const done = (val) => { root._reject = null; resolve(val); closeModal(); };
+          root._reject = () => resolve(null);
+          root.querySelector('[data-x]').addEventListener('click', () => done(null));
+          root.querySelector('#modal-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const out = {};
+            new FormData(e.target).forEach((v, k) => out[k] = v);
+            done(out);
+          });
+          // Campos con combobox creable (f.combo = () => array de opciones).
+          opts.fields.forEach((f) => {
+            if (f.combo) { const i = root.querySelector(`[name="${f.name}"]`); if (i) makeCombobox(i, f.combo); }
+          });
+          setTimeout(() => root.querySelector('.field')?.focus(), 30);
+        });
+      }
+
+      // Confirmación → resuelve true/false.
+      function modalConfirm(opts) {
+        return new Promise((resolve) => {
+          const root = mountModal(`
+            <div class="modal-head"><h3>${esc(opts.title)}</h3></div>
+            <div class="modal-body"><p class="modal-msg">${esc(opts.message)}</p></div>
+            <div class="modal-foot">
+              <button class="btn-ghost" type="button" data-x>Cancelar</button>
+              <button class="btn-primary ${opts.danger ? 'danger' : ''}" type="button" data-ok>${esc(opts.confirm || 'Confirmar')}</button>
+            </div>`);
+          const done = (val) => { root._reject = null; resolve(val); closeModal(); };
+          root._reject = () => resolve(false);
+          root.querySelector('[data-x]').addEventListener('click', () => done(false));
+          root.querySelector('[data-ok]').addEventListener('click', () => done(true));
+        });
+      }
+
+      // ─── combobox creable (autocompletar + "crear si no existe") ──────────────
+      // Lista de valores únicos, ordenada y sin vacíos.
+      const distinct = (arr) => [...new Set(arr.map((x) => String(x ?? '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+      const clientesList = () => distinct(DATA.ventas.map((v) => v.cliente));
+      const valoresProducto = (campo) => distinct(DATA.productos.map((p) => p[campo]));
+
+      // Convierte un <input type="text"> en un combobox: filtra las opciones que
+      // ya existen y, si lo escrito no coincide con ninguna, ofrece "+ Crear …".
+      // No obliga a elegir: el texto nuevo se conserva y se crea al guardar.
+      function makeCombobox(input, getOptions) {
+        const wrap = document.createElement('div');
+        wrap.className = 'combo';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        input.setAttribute('autocomplete', 'off');
+        const menu = document.createElement('div');
+        menu.className = 'combo-menu';
+        menu.hidden = true;
+        wrap.appendChild(menu);
+        let active = -1;
+
+        function render() {
+          const q = input.value.trim().toLowerCase();
+          const all = getOptions();
+          const matches = all.filter((o) => o.toLowerCase().includes(q)).slice(0, 8);
+          const exact = all.some((o) => o.toLowerCase() === q);
+          let html = matches.map((o) => `<button type="button" class="combo-opt" data-val="${esc(o)}">${esc(o)}</button>`).join('');
+          const nuevo = input.value.trim();
+          if (nuevo && !exact) {
+            html += `<button type="button" class="combo-opt combo-create" data-val="${esc(nuevo)}"><i class="bi bi-plus-lg"></i> Crear «<strong>${esc(nuevo)}</strong>»</button>`;
+          }
+          menu.innerHTML = html;
+          menu.hidden = !html;
+          active = -1;
+        }
+        const close = () => { menu.hidden = true; active = -1; };
+        const opts = () => [...menu.querySelectorAll('.combo-opt')];
+
+        input.addEventListener('focus', render);
+        input.addEventListener('input', render);
+        input.addEventListener('keydown', (e) => {
+          const list = opts();
+          if (e.key === 'ArrowDown') { e.preventDefault(); if (menu.hidden) { render(); return; } active = Math.min(active + 1, list.length - 1); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); }
+          else if (e.key === 'Enter') { if (!menu.hidden && active >= 0) { e.preventDefault(); list[active].click(); } close(); return; }
+          else if (e.key === 'Escape') { if (!menu.hidden) { e.stopPropagation(); close(); } return; }
+          else return;
+          list.forEach((o, i) => o.classList.toggle('active', i === active));
+        });
+        // mousedown (no click) para adelantarnos al blur del input.
+        menu.addEventListener('mousedown', (e) => {
+          const b = e.target.closest('.combo-opt'); if (!b) return;
+          e.preventDefault();
+          input.value = b.dataset.val;
+          close();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        input.addEventListener('blur', () => setTimeout(close, 150));
+        return { close, render };
+      }
+
+      // ─── render maestro ──────────────────────────────────────────────────────
+      function renderAll() { renderKPIs(); renderInventario(); renderVentas(); }
+
+      // ─── KPIs ──────────────────────────────────────────────────────────────
+      function renderKPIs() {
+        const total = DATA.ventas.reduce((a, v) => a + (v.total || 0), 0);
+        const unidades = DATA.ventas.reduce((a, v) => a + (v.cantidad || 0), 0);
+        const stockTotal = DATA.productos.reduce((a, p) => a + (p.stock || 0), 0);
+        const agotados = DATA.productos.filter((p) => (p.stock || 0) <= 0).length;
+        const cards = [
+          { l: 'Total vendido', v: fmt(total), i: 'cash-stack' },
+          { l: 'Unidades vendidas', v: unidades, i: 'bag-check' },
+          { l: 'Stock total', v: stockTotal, i: 'box-seam' },
+          { l: 'Agotados', v: agotados, i: 'exclamation-triangle' },
+        ];
+        $('#kpis').innerHTML = cards.map((c) => `
+          <div class="kpi">
+            <i class="bi bi-${c.i}"></i>
+            <div><span class="kpi-val">${c.v}</span><span class="kpi-lbl">${c.l}</span></div>
+          </div>`).join('');
+      }
+
+      // ─── tabs ──────────────────────────────────────────────────────────────
+      document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach((x) => x.classList.remove('active'));
+        t.classList.add('active');
+        $(`.panel[data-panel="${t.dataset.tab}"]`).classList.add('active');
+      }));
+
+      // ─── AGREGAR VENTA (modal con varios productos) ───────────────────────────
+      // Precio real por unidad (lo que de verdad cobras). La tienda muestra otro.
+      const PRECIO_REAL = 25000;
+
+      function abrirModalVenta() {
+        let items = [];   // { key, marca, color, talla, cantidad, stock }
+
+        const root = mountModal(`
+          <div class="modal-head"><h3>Agregar venta</h3></div>
+          <div class="modal-body">
+            <label class="mfield">Cliente
+              <input id="v-cliente" class="field" type="text" placeholder="Nombre del cliente" autocomplete="off" />
+            </label>
+            <div class="mfield">Productos
+              <div class="vitem-add">
+                <select id="v-prod" class="field"></select>
+                <button type="button" id="v-add" class="btn-ghost vitem-addbtn"><i class="bi bi-plus-lg"></i></button>
+              </div>
+            </div>
+            <div id="v-list" class="vitem-list"></div>
+            <div class="vitem-total"><span>Total</span><strong id="v-total">$ 0</strong></div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn-ghost" type="button" data-x>Cancelar</button>
+            <button class="btn-primary" type="button" id="v-save">Guardar venta</button>
+          </div>`);
+        root._reject = () => {};
+
+        const sel = root.querySelector('#v-prod');
+        const listEl = root.querySelector('#v-list');
+        const totalEl = root.querySelector('#v-total');
+
+        // Cliente: combobox creable sobre los clientes de ventas anteriores.
+        makeCombobox(root.querySelector('#v-cliente'), clientesList);
+
+        function disponibles() {
+          // stock restante descontando lo ya puesto en el modal
+          return DATA.productos.map((p) => {
+            const enModal = items.filter((it) => it.key === keyOf(p)).reduce((a, it) => a + it.cantidad, 0);
+            return { p, libre: (p.stock || 0) - enModal };
+          });
+        }
+
+        function pintarSelect() {
+          const ops = disponibles()
+            .filter((d) => d.libre > 0)
+            .map((d) => `<option value="${esc(keyOf(d.p))}">${esc(d.p.marca)} · ${esc(d.p.color)} · ${esc(d.p.talla)} (${d.libre} disp)</option>`)
+            .join('');
+          sel.innerHTML = ops || '<option value="">Sin stock disponible</option>';
+        }
+
+        function pintarLista() {
+          listEl.innerHTML = items.map((it, i) => `
+            <div class="vitem">
+              <span class="vitem-name">${esc(it.marca)} · ${esc(it.color)} · ${esc(it.talla)}</span>
+              <div class="qty">
+                <button type="button" data-act="dec" data-i="${i}">−</button>
+                <span>${it.cantidad}</span>
+                <button type="button" data-act="inc" data-i="${i}">+</button>
+              </div>
+              <span class="vitem-sub">${fmt(it.cantidad * PRECIO_REAL)}</span>
+              <button type="button" class="vitem-del" data-act="del" data-i="${i}"><i class="bi bi-x-lg"></i></button>
+            </div>`).join('');
+          const tot = items.reduce((a, it) => a + it.cantidad, 0) * PRECIO_REAL;
+          totalEl.textContent = fmt(tot);
+          pintarSelect();
+        }
+
+        root.querySelector('#v-add').addEventListener('click', () => {
+          const key = sel.value;
+          if (!key) return;
+          const p = DATA.productos.find((x) => keyOf(x) === key);
+          const libre = disponibles().find((d) => keyOf(d.p) === key)?.libre ?? 0;
+          if (libre <= 0) { pill('Sin stock', 'err'); return; }
+          const ex = items.find((it) => it.key === key);
+          if (ex) ex.cantidad++;
+          else items.push({ key, marca: p.marca, color: p.color, talla: p.talla, producto: p.producto, cantidad: 1 });
+          pintarLista();
+        });
+
+        listEl.addEventListener('click', (e) => {
+          const b = e.target.closest('button'); if (!b) return;
+          const i = +b.dataset.i; const act = b.dataset.act;
+          if (act === 'del') items.splice(i, 1);
+          if (act === 'inc') {
+            const libre = disponibles().find((d) => keyOf(d.p) === items[i].key)?.libre ?? 0;
+            if (libre <= 0) { pill('Sin stock', 'err'); return; }
+            items[i].cantidad++;
+          }
+          if (act === 'dec') { items[i].cantidad--; if (items[i].cantidad <= 0) items.splice(i, 1); }
+          pintarLista();
+        });
+
+        root.querySelector('[data-x]').addEventListener('click', closeModal);
+
+        root.querySelector('#v-save').addEventListener('click', async () => {
+          if (!items.length) { pill('Agrega al menos un producto', 'err'); return; }
+          const btn = root.querySelector('#v-save');
+          btn.disabled = true; btn.textContent = 'Guardando…';
+          const payloadItems = items.map((it) => ({
+            producto: it.producto, marca: it.marca, color: it.color, talla: it.talla,
+            cantidad: it.cantidad, precio: PRECIO_REAL,
+          }));
+          const ok = await submit({
+            action: 'sale', items: payloadItems,
+            cliente: root.querySelector('#v-cliente').value.trim(),
+          }, 'Venta registrada ✓');
+          if (ok) closeModal();
+          else { btn.disabled = false; btn.textContent = 'Guardar venta'; }
+        });
+
+        pintarLista();
+        setTimeout(() => root.querySelector('#v-cliente')?.focus(), 30);
+      }
+
+      $('#btn-add-venta').addEventListener('click', abrirModalVenta);
+
+      // ─── INVENTARIO ──────────────────────────────────────────────────────────
+      function renderInventario() {
+        const q = ($('#inv-search').value || '').toLowerCase();
+        const list = DATA.productos.filter((p) => !q || [p.producto, p.marca, p.color, p.talla].join(' ').toLowerCase().includes(q));
+        $('#inv-body').innerHTML = list.map((p) => {
+          const k = esc(keyOf(p));
+          const oos = (p.stock || 0) <= 0;
+          return `
+            <article class="inv-card${oos ? ' oos' : ''}" data-key="${k}">
+              <div class="inv-thumb">${thumb(p)}</div>
+              <div class="inv-main">
+                <div class="inv-title"><span class="inv-marca">${esc(p.marca)}</span><span class="inv-stock-pill ${oos ? 'zero' : ''}">${p.stock} u</span></div>
+                <div class="inv-sub">${esc(p.producto)} · ${esc(p.color)} · ${esc(p.talla)}</div>
+                <div class="inv-nums">
+                  <span>Tienda <b>${fmt(p.precio)}</b></span>
+                  <span>Vendidos <b>${p.vendidos}</b></span>
+                </div>
+              </div>
+              <div class="inv-actions">
+                <button class="mini" data-act="addstock" title="Agregar stock"><i class="bi bi-plus-lg"></i></button>
+                <button class="mini" data-act="edit" title="Editar"><i class="bi bi-pencil"></i></button>
+                <button class="mini danger" data-act="del" title="Eliminar"><i class="bi bi-trash"></i></button>
+              </div>
+            </article>`;
+        }).join('') || '<p class="empty">Sin productos.</p>';
+      }
+      $('#inv-search').addEventListener('input', renderInventario);
+
+      $('#inv-body').addEventListener('click', async (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        const card = b.closest('.inv-card');
+        const p = DATA.productos.find((x) => keyOf(x) === card.dataset.key);
+        if (!p) return;
+        const act = b.dataset.act;
+        const ref = `${p.marca} · ${p.color} · ${p.talla}`;
+        const keyObj = { producto: p.producto, marca: p.marca, color: p.color, talla: p.talla };
+
+        if (act === 'addstock') {
+          const v = await modalForm({
+            title: 'Agregar stock', subtitle: ref, confirm: 'Agregar',
+            fields: [{ name: 'cantidad', label: 'Unidades a sumar', type: 'number', value: '10', min: '1' }],
+          });
+          if (!v) return;
+          const cant = parseInt(v.cantidad, 10);
+          if (!cant) return;
+          await submit({ action: 'add_stock', ...keyObj, cantidad: cant }, 'Stock agregado ✓');
+        }
+
+        if (act === 'edit') {
+          const v = await modalForm({
+            title: 'Editar producto', subtitle: ref, confirm: 'Guardar',
+            fields: [
+              { name: 'precio', label: 'Precio tienda', type: 'number', value: p.precio },
+              { name: 'imagen', label: 'Imagen (URL)', type: 'text', value: p.imagen },
+            ],
+          });
+          if (!v) return;
+          await submit({ action: 'update_product', key: keyObj, fields: v }, 'Actualizado ✓');
+        }
+
+        if (act === 'del') {
+          const ok = await modalConfirm({ title: 'Eliminar producto', message: `¿Eliminar ${ref}? Esto borra la fila del inventario.`, confirm: 'Eliminar', danger: true });
+          if (!ok) return;
+          await submit({ action: 'delete_product', ...keyObj }, 'Eliminado');
+        }
+      });
+
+      // ─── NUEVO ─────────────────────────────────────────────────────────────
+      // Cada campo es un combobox creable que reútiliza los valores ya existentes
+      // del inventario (marcas, colores, tallas, categorías…).
+      ['producto', 'marca', 'color', 'talla', 'categoria'].forEach((campo) => {
+        const inp = $(`#form-nuevo [name="${campo}"]`);
+        if (inp) makeCombobox(inp, () => valoresProducto(campo));
+      });
+
+      $('#form-nuevo').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const o = {};
+        new FormData(e.target).forEach((v, k) => (o[k] = v));
+        // ¿Ya existe esta combinación producto/marca/color/talla? (sin distinguir mayúsculas)
+        const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === keyOf(o).toLowerCase());
+        const cant = parseInt(o.stock_inicial, 10) || 0;
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.textContent = existente ? 'Sumando stock…' : 'Creando…';
+        try {
+          if (existente) {
+            // Ya existe → solo sumamos el stock indicado, no creamos fila nueva.
+            await post({ action: 'add_stock', producto: existente.producto, marca: existente.marca, color: existente.color, talla: existente.talla, cantidad: cant });
+            pill(`Ya existía — +${cant} al stock ✓`);
+          } else {
+            await post({ action: 'add_product', ...o });
+            pill('Producto creado ✓');
+          }
+          e.target.reset(); renderAll();
+        } catch (err) { pill(err.message, 'err'); }
+        finally { btn.disabled = false; btn.textContent = 'Crear producto'; }
+      });
+
+      // ─── VENTAS ────────────────────────────────────────────────────────────
+      function renderVentas() {
+        const q = ($('#ventas-search')?.value || '').toLowerCase();
+        const v = [...DATA.ventas].reverse().filter((x) =>
+          !q || [x.cliente, x.producto, x.marca, x.color, x.talla].join(' ').toLowerCase().includes(q));
+        $('#ventas-body').innerHTML = v.map((x) => `
+          <article class="venta-card" data-id="${esc(x.id)}">
+            <div class="venta-head">
+              <span class="venta-cliente">${x.cliente ? esc(x.cliente) : '<i>Sin cliente</i>'}</span>
+              <span class="venta-total">${fmt(x.total)}</span>
+            </div>
+            <div class="venta-sub">${esc(x.marca)} · ${esc(x.color)} · ${esc(x.talla)} · ${x.cantidad} u</div>
+            <div class="venta-foot">
+              <span class="venta-fecha">${esc(x.fecha)}</span>
+              <span class="venta-tags">
+                <span class="tag">${x.cantidad} u</span>
+              </span>
+            </div>
+            <div class="venta-actions">
+              <button class="mini" data-act="edit" title="Editar"><i class="bi bi-pencil"></i></button>
+              <button class="mini danger" data-act="del" title="Eliminar"><i class="bi bi-trash"></i></button>
+            </div>
+          </article>`).join('') || '<p class="empty">Aún no hay ventas.</p>';
+      }
+      document.addEventListener('input', (e) => { if (e.target.id === 'ventas-search') renderVentas(); });
+
+      $('#ventas-body').addEventListener('click', async (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        const card = b.closest('.venta-card');
+        const x = DATA.ventas.find((v) => String(v.id) === card.dataset.id);
+        if (!x) return;
+        const ref = `${x.marca} · ${x.color} · ${x.talla}`;
+
+        if (b.dataset.act === 'edit') {
+          const v = await modalForm({
+            title: 'Editar venta', subtitle: `${ref}${x.cliente ? ' · ' + x.cliente : ''}`, confirm: 'Guardar',
+            fields: [
+              { name: 'cliente', label: 'Cliente', type: 'text', value: x.cliente, combo: clientesList },
+              { name: 'cantidad', label: 'Cantidad', type: 'number', value: x.cantidad, min: '1' },
+            ],
+          });
+          if (!v) return;
+          await submit({ action: 'update_venta', id: x.id, fields: v }, 'Venta actualizada ✓');
+        }
+
+        if (b.dataset.act === 'del') {
+          const ok = await modalConfirm({ title: 'Eliminar venta', message: `¿Eliminar esta venta de ${ref}? Se devolverá ${x.cantidad} u al stock.`, confirm: 'Eliminar', danger: true });
+          if (!ok) return;
+          await submit({ action: 'delete_venta', id: x.id }, 'Venta eliminada ✓');
+        }
+      });
+
+      // ─── auto-login si ya hay clave ──────────────────────────────────────────
+      (async () => {
+        if (PASS) {
+          try { await entrar(); }
+          catch { sessionStorage.removeItem(SS_PASS); /* clave guardada inválida → mostrar login */ }
+        }
+      })();
+    </script>
+
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--font-body);
+        background: var(--bone-100);
+        color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── LOGIN ── */
+      .login {
+        position: fixed; inset: 0;
+        display: grid; place-items: center;
+        padding: var(--space-4);
+        background:
+          radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--blood-600) 22%, transparent), transparent 55%),
+          var(--carbon-900);
+        z-index: 100;
+      }
+      .login-card {
+        display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+        width: 100%; max-width: 360px; text-align: center;
+        background: var(--bone-50);
+        padding: var(--space-8) var(--space-6) var(--space-7);
+        border: 2px solid var(--carbon-900);
+        box-shadow: var(--shadow-press);
+      }
+      .login-mark {
+        display: grid; place-items: center;
+        width: 92px; height: 92px; margin-bottom: var(--space-1);
+        background: var(--carbon-900);
+        border: 2px solid var(--carbon-900);
+        box-shadow: var(--shadow-press);
+      }
+      .login-mark img { width: 60px; height: 60px; object-fit: contain; }
+      .login-logo { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1; }
+      .login-logo span { color: var(--blood-600); }
+      .login-sub { margin: 0 0 var(--space-2); color: var(--fg-muted); font-size: .85rem; }
+
+      .login-field { position: relative; width: 100%; }
+      .login-field-ico {
+        position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+        color: var(--fg-muted); font-size: .95rem; pointer-events: none;
+      }
+      .login-field input {
+        width: 100%; font-family: var(--font-body); font-size: .95rem;
+        padding: 12px 42px; border: 1px solid var(--border-strong);
+        background: var(--bone-50); color: var(--fg);
+      }
+      .login-field input:focus { outline: none; box-shadow: var(--focus-ring); }
+      .login-eye {
+        position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+        width: 34px; height: 34px; display: grid; place-items: center;
+        border: none; background: transparent; color: var(--fg-muted); cursor: pointer; font-size: 1rem;
+      }
+      .login-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+      .login-btn i { font-size: 1.3rem; }
+      .login-err { display: inline-flex; align-items: center; gap: 6px; color: var(--blood-600); font-size: .82rem; }
+
+      /* ── LAYOUT ── */
+      .app { min-height: 100vh; }
+      .topbar {
+        position: sticky; top: 0; z-index: 30;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        background: var(--carbon-900); color: var(--bone-50);
+      }
+      .brand { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; }
+      .brand span, .login-logo span { color: var(--blood-600); }
+      .topbar-actions { display: flex; gap: var(--space-2); }
+      .icon-btn {
+        background: transparent; border: 1px solid rgba(255,255,255,.25);
+        color: var(--bone-50); width: 38px; height: 38px; border-radius: 0;
+        cursor: pointer; font-size: 1.05rem; transition: var(--transition);
+      }
+
+      /* ── KPIs ── */
+      .kpis {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2);
+        padding: var(--space-4);
+      }
+      .kpi {
+        display: flex; align-items: center; gap: var(--space-3);
+        background: var(--bone-50); border: 1px solid var(--border);
+        padding: var(--space-3) var(--space-4); box-shadow: var(--shadow-sm);
+      }
+      .kpi i { font-size: 1.5rem; color: var(--blood-600); }
+      .kpi > div { display: flex; flex-direction: column; min-width: 0; }
+      .kpi-val { font-family: var(--font-display); font-size: 1.4rem; line-height: 1.1; }
+      .kpi-lbl { font-size: .72rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+      /* ── TABS ── */
+      .tabs {
+        display: flex; gap: 0; overflow-x: auto;
+        padding: 0 var(--space-4); border-bottom: 1px solid var(--border);
+        background: var(--bone-100);
+      }
+      .tab {
+        flex: 0 0 auto;
+        background: transparent; border: none; border-bottom: 3px solid transparent;
+        padding: var(--space-3) var(--space-4); cursor: pointer;
+        font-family: var(--font-body); font-weight: 600; font-size: .9rem;
+        color: var(--fg-muted); white-space: nowrap; transition: var(--transition);
+      }
+      .tab.active { color: var(--fg); border-bottom-color: var(--blood-600); }
+
+      /* ── PANELS ── */
+      .content { padding: var(--space-5) var(--space-4) var(--space-8); }
+      /* reset del padding global de <section> (global.css) que aquí no aplica */
+      .panel { display: none; padding: 0; }
+      .panel.active { display: block; animation: fade .2s ease; }
+      @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+      .panel-head { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+      .panel-head h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0; }
+
+      /* ── FIELDS ── */
+      .field {
+        font-family: var(--font-body); font-size: .92rem;
+        padding: 10px 12px; border: 1px solid var(--border-strong);
+        background: var(--bone-50); color: var(--fg); width: 100%;
+      }
+      .field:focus { outline: none; box-shadow: var(--focus-ring); }
+      .search { max-width: 320px; }
+
+      /* ── COMBOBOX (autocompletar + crear) ── */
+      .combo { position: relative; }
+      .combo > .field { width: 100%; }
+      .combo-menu {
+        position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 40;
+        max-height: 240px; overflow-y: auto;
+        background: var(--bone-50); border: 1px solid var(--carbon-900);
+        box-shadow: var(--shadow-md);
+      }
+      .combo-opt {
+        display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+        padding: 9px 12px; border: none; border-bottom: 1px solid var(--border);
+        background: transparent; color: var(--fg); cursor: pointer;
+        font-family: var(--font-body); font-size: .9rem;
+      }
+      .combo-opt:last-child { border-bottom: none; }
+      .combo-opt.active { background: var(--bone-200); }
+      .combo-create { color: var(--blood-600); font-weight: 600; }
+      .combo-create strong { color: var(--fg); }
+
+      .btn-primary {
+        font-family: var(--font-body); font-weight: 700; font-size: .92rem;
+        padding: 11px 18px; border: 2px solid var(--carbon-900);
+        background: var(--blood-600); color: #fff; cursor: pointer;
+        transition: var(--transition); box-shadow: var(--shadow-press);
+      }
+      .btn-primary:disabled { opacity: .6; cursor: default; box-shadow: none; }
+
+      /* ── imágenes / fallback ── */
+      .sku-thumb, .inv-thumb {
+        display: block; overflow: hidden; background: var(--bone-200);
+        border: 1px solid var(--border);
+      }
+      .sku-thumb img, .inv-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .thumb-fb {
+        display: grid; place-items: center; width: 100%; height: 100%;
+        font-family: var(--font-display); font-size: 1.5rem; color: var(--carbon-300);
+        background: var(--bone-200);
+      }
+
+      /* ── SKU GRID (vender) ── */
+      .sku-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+      .sku-card {
+        display: flex; flex-direction: column; gap: 4px; text-align: left;
+        padding: 0; border: 1px solid var(--border-strong);
+        background: var(--bone-50); cursor: pointer; transition: var(--transition); overflow: hidden;
+      }
+      .sku-card.oos { opacity: .5; cursor: default; }
+      .sku-thumb { aspect-ratio: 1 / 1; }
+      .sku-marca { font-family: var(--font-display); font-size: 1.05rem; padding: var(--space-2) var(--space-3) 0; }
+      .sku-meta { font-size: .74rem; color: var(--fg-muted); padding: 0 var(--space-3); }
+      .sku-foot { display: flex; justify-content: space-between; align-items: baseline; padding: 2px var(--space-3) var(--space-3); }
+      .sku-precio { font-weight: 700; }
+      .sku-stock { font-size: .72rem; color: var(--fg-muted); }
+
+      /* ── CARD LIST (inventario / ventas) ── */
+      .card-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+      .inv-card {
+        display: grid; grid-template-columns: 60px 1fr auto; gap: var(--space-3);
+        align-items: center; padding: var(--space-3);
+        background: var(--bone-50); border: 1px solid var(--border-strong);
+      }
+      .inv-card.oos { background: rgba(176,41,31,.05); }
+      .inv-thumb { width: 60px; height: 60px; }
+      .inv-main { min-width: 0; }
+      .inv-title { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; }
+      .inv-marca { font-family: var(--font-display); font-size: 1.1rem; }
+      .inv-stock-pill { font-size: .72rem; font-weight: 700; padding: 2px 8px; background: var(--olive-600); color: #fff; border-radius: 999px; }
+      .inv-stock-pill.zero { background: var(--blood-600); }
+      .inv-sub { font-size: .76rem; color: var(--fg-muted); margin: 2px 0 6px; }
+      .inv-nums { display: flex; flex-wrap: wrap; gap: 4px var(--space-3); font-size: .74rem; color: var(--fg-muted); }
+      .inv-nums b { color: var(--fg); }
+      .inv-actions { display: flex; flex-direction: column; gap: 6px; }
+
+      .venta-card { padding: var(--space-3) var(--space-4); background: var(--bone-50); border: 1px solid var(--border); border-left: 3px solid var(--olive-600); }
+      .venta-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); }
+      .venta-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+      .venta-cliente { font-family: var(--font-display); font-size: 1.05rem; }
+      .venta-cliente i { color: var(--fg-muted); font-weight: 400; }
+      .venta-total { font-weight: 700; }
+      .venta-sub { font-size: .78rem; color: var(--fg-muted); margin: 2px 0 8px; }
+      .venta-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+      .venta-fecha { font-family: var(--font-mono); font-size: .72rem; color: var(--fg-muted); }
+      .venta-tags { display: flex; gap: 6px; }
+      .tag { font-size: .7rem; padding: 2px 8px; background: var(--bone-200); border-radius: 999px; }
+      .tag.pos { background: rgba(90,90,46,.15); color: var(--olive-700); font-weight: 700; }
+
+      /* ── CART ── */
+      .cart {
+        position: sticky; bottom: 0; margin-top: var(--space-5);
+        background: var(--bone-50); border: 2px solid var(--carbon-900);
+        padding: var(--space-4); box-shadow: var(--shadow-md);
+      }
+      .cart h3 { font-family: var(--font-display); margin: 0 0 var(--space-3); font-size: 1.1rem; }
+      .cart-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--space-3); align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+      .qty { display: flex; align-items: center; gap: var(--space-2); }
+      .qty button { width: 26px; height: 26px; border: 1px solid var(--border-strong); background: var(--bone-100); cursor: pointer; font-size: 1rem; }
+      .cart-sub { font-weight: 700; min-width: 70px; text-align: right; }
+      .cart-del { border: none; background: transparent; color: var(--blood-600); cursor: pointer; font-size: 1.1rem; }
+      .cart-foot { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: flex-end; margin-top: var(--space-3); }
+      .cart-foot .field { max-width: 160px; }
+      .cart-total { font-size: 1rem; }
+      .cart-total strong { font-family: var(--font-display); font-size: 1.3rem; }
+
+      /* ── acciones / mini-botones ── */
+      .mini { width: 34px; height: 34px; border: 1px solid var(--border-strong); background: var(--bone-100); cursor: pointer; }
+      .mini.danger { color: var(--blood-600); }
+      .empty { text-align: center; color: var(--fg-muted); padding: var(--space-6); }
+
+      /* ── MODAL ── */
+      .modal-root { display: none; }
+      .modal-root.open { display: block; }
+      .modal-backdrop { position: fixed; inset: 0; background: var(--modal-backdrop); z-index: 300; animation: fade .15s ease; }
+      .modal {
+        position: fixed; z-index: 301; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: calc(100% - 2 * var(--space-4)); max-width: 440px; max-height: 90vh; overflow-y: auto;
+        background: var(--bone-50); border: 2px solid var(--carbon-900);
+        box-shadow: var(--shadow-md); animation: slideUp .2s ease;
+      }
+      @keyframes slideUp { from { transform: translate(-50%, -46%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+      .modal-head { padding: var(--space-5) var(--space-5) var(--space-3); }
+      .modal-head h3 { font-family: var(--font-display); font-size: 1.4rem; margin: 0; }
+      .modal-sub { margin: 4px 0 0; font-size: .82rem; color: var(--fg-muted); }
+      .modal-body { padding: 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+      .modal-msg { margin: 0; font-size: .92rem; line-height: 1.5; }
+      .mfield { display: flex; flex-direction: column; gap: 6px; font-size: .8rem; font-weight: 600; color: var(--fg-muted); }
+      .modal-foot { display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-5); }
+      .btn-ghost {
+        font-family: var(--font-body); font-weight: 600; font-size: .92rem;
+        padding: 11px 18px; border: 1px solid var(--border-strong); background: transparent;
+        color: var(--fg); cursor: pointer; transition: var(--transition);
+      }
+      .btn-primary.danger { background: var(--blood-600); border-color: var(--blood-700); }
+
+      /* ── modal Agregar venta ── */
+      .vitem-add { display: flex; gap: var(--space-2); }
+      .vitem-add .field { flex: 1; }
+      .vitem-addbtn { padding: 0 14px; flex: 0 0 auto; }
+      .vitem-list { display: flex; flex-direction: column; gap: var(--space-2); }
+      .vitem { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--space-2); align-items: center; font-size: .85rem; padding: var(--space-2); background: var(--bone-100); border: 1px solid var(--border); }
+      .vitem-name { min-width: 0; }
+      .vitem-sub { font-weight: 700; min-width: 64px; text-align: right; }
+      .vitem-del { border: none; background: transparent; color: var(--blood-600); cursor: pointer; font-size: .9rem; }
+      .qty { display: flex; align-items: center; gap: var(--space-2); }
+      .qty button { width: 26px; height: 26px; border: 1px solid var(--border-strong); background: var(--bone-50); cursor: pointer; font-size: 1rem; }
+      .vitem-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: var(--space-2); border-top: 1px solid var(--border-strong); font-size: .9rem; }
+      .vitem-total strong { font-family: var(--font-display); font-size: 1.4rem; }
+      .wide-search { max-width: none; margin-bottom: var(--space-4); }
+
+      /* ── FORM ── */
+      .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); max-width: 640px; }
+      .form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; font-weight: 600; color: var(--fg-muted); }
+      .form-grid .wide { grid-column: 1 / -1; }
+
+      /* ── PILL ── */
+      .pill {
+        position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+        padding: .6rem 1.3rem; border-radius: 999px; color: #fff; font-weight: 600; font-size: .88rem;
+        opacity: 0; pointer-events: none; transition: all .3s ease; z-index: 200;
+      }
+      .pill.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .pill.ok { background: var(--olive-600); }
+      .pill.err { background: var(--blood-600); }
+
+      @media (hover: hover) {
+        .icon-btn:hover { background: rgba(255,255,255,.12); }
+        .btn-primary:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--carbon-900); }
+        .sku-card:not(.oos):hover { transform: translateY(-2px); box-shadow: var(--shadow-press); }
+        .tab:hover { color: var(--fg); }
+        .mini:hover { background: var(--bone-300); }
+        .btn-ghost:hover { background: var(--bone-200); }
+        .combo-opt:hover { background: var(--bone-200); }
+        .login-eye:hover { color: var(--fg); }
+      }
+
+      @media (min-width: 750px) {
+        .kpis { grid-template-columns: repeat(5, 1fr); }
+        .content { padding-inline: var(--space-6); }
+        .topbar, .kpis, .tabs { padding-inline: var(--space-6); }
+        .sku-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+        .inv-card { grid-template-columns: 72px 1fr auto; }
+        .inv-thumb { width: 72px; height: 72px; }
+        .inv-actions { flex-direction: row; }
+      }
+    </style>
+  </body>
+</html>
