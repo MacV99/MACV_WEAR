@@ -14,6 +14,10 @@ import { API_URL } from '../scripts/admin-config';
     <link rel="icon" type="image/avif" href="/img/logo-mark.avif" />
     <link rel="apple-touch-icon" href="/img/logo-mark.avif" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <!-- Marca la sesión ANTES de pintar → sin parpadeo del login al recargar. -->
+    <script is:inline>
+      if (localStorage.getItem('macv_admin_pass')) document.documentElement.classList.add('authed');
+    </script>
   </head>
   <body>
     <!-- LOGIN -->
@@ -24,58 +28,46 @@ import { API_URL } from '../scripts/admin-config';
         <p class="login-sub">Gestión de inventario y ventas</p>
         <div class="login-field">
           <i class="bi bi-lock-fill login-field-ico"></i>
-          <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
-          <button type="button" id="login-eye" class="login-eye" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye-fill"></i></button>
+          <input id="login-pin" class="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="• • • •" autocomplete="off" aria-label="PIN de acceso" />
+          <button type="button" id="login-eye" class="login-eye" aria-label="Mostrar u ocultar PIN"><i class="bi bi-eye-fill"></i></button>
         </div>
         <button type="submit" class="btn-primary login-btn">Entrar <i class="bi bi-arrow-right-short"></i></button>
         <span id="login-err" class="login-err" hidden><i class="bi bi-exclamation-circle-fill"></i> <span></span></span>
+        <a href="/" class="login-back"><i class="bi bi-arrow-left-short"></i> Volver a la tienda</a>
       </form>
     </div>
 
     <!-- APP -->
     <div id="app" class="app" hidden>
-      <header class="topbar">
-        <div class="brand">MacV<span>·</span>Panel</div>
-        <div class="topbar-actions">
-          <button id="btn-refresh" class="icon-btn" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-          <button id="btn-logout" class="icon-btn" title="Salir"><i class="bi bi-box-arrow-right"></i></button>
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <div class="brand"><img class="brand-mark" src="/img/logo-mark.avif" alt="" width="28" height="28" />MacV<span>·</span>Panel</div>
+          <div class="sidebar-actions">
+            <a href="/" class="icon-btn" title="Volver a la tienda"><i class="bi bi-shop"></i></a>
+            <button id="btn-refresh" class="icon-btn" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+            <button id="btn-logout" class="icon-btn" title="Salir"><i class="bi bi-box-arrow-right"></i></button>
+          </div>
         </div>
-      </header>
+        <nav class="side-nav">
+          <button class="tab" data-tab="inventario"><i class="bi bi-box-seam"></i> Inventario</button>
+          <button class="tab active" data-tab="ventas"><i class="bi bi-receipt"></i> Ventas</button>
+          <button class="tab" data-tab="clientes"><i class="bi bi-people"></i> Clientes</button>
+        </nav>
+      </aside>
 
-      <!-- KPIs -->
-      <section class="kpis" id="kpis"></section>
+      <div class="main">
+        <!-- KPIs -->
+        <section class="kpis" id="kpis"></section>
 
-      <!-- TABS -->
-      <nav class="tabs">
-        <button class="tab active" data-tab="ventas"><i class="bi bi-receipt"></i> Ventas</button>
-        <button class="tab" data-tab="inventario"><i class="bi bi-box-seam"></i> Inventario</button>
-        <button class="tab" data-tab="nuevo"><i class="bi bi-plus-square"></i> Nuevo</button>
-      </nav>
-
-      <main class="content">
+        <main class="content">
         <!-- INVENTARIO -->
         <section class="panel" data-panel="inventario">
           <div class="panel-head">
             <h2>Inventario</h2>
-            <input id="inv-search" class="field search" type="search" placeholder="Buscar…" />
+            <button id="btn-nuevo" class="btn-primary"><i class="bi bi-plus-lg"></i> Nuevo producto</button>
           </div>
+          <input id="inv-search" class="field search wide-search" type="search" placeholder="Buscar…" />
           <div id="inv-body" class="card-list"></div>
-        </section>
-
-        <!-- NUEVO -->
-        <section class="panel" data-panel="nuevo">
-          <div class="panel-head"><h2>Nuevo producto</h2></div>
-          <form id="form-nuevo" class="form-grid">
-            <label>Producto <input name="producto" class="field" placeholder="Boxer" required /></label>
-            <label>Marca <input name="marca" class="field" placeholder="Nike" required /></label>
-            <label>Color <input name="color" class="field" placeholder="Negro" required /></label>
-            <label>Talla <input name="talla" class="field" placeholder="XL" required /></label>
-            <label>Precio tienda <input name="precio" class="field" type="number" placeholder="30000" required /></label>
-            <label>Stock inicial <input name="stock_inicial" class="field" type="number" placeholder="10" required /></label>
-            <label>Categoría <input name="categoria" class="field" placeholder="Ropa interior" /></label>
-            <label class="wide">Imagen (URL) <input name="imagen" class="field" placeholder="https://…" /></label>
-            <button type="submit" class="btn-primary wide">Crear producto</button>
-          </form>
         </section>
 
         <!-- VENTAS -->
@@ -85,9 +77,22 @@ import { API_URL } from '../scripts/admin-config';
             <button id="btn-add-venta" class="btn-primary"><i class="bi bi-plus-lg"></i> Agregar venta</button>
           </div>
           <input id="ventas-search" class="field search wide-search" type="search" placeholder="Buscar cliente, producto…" />
+          <div class="seg" id="ventas-filtro">
+            <button class="seg-btn active" type="button" data-estado="todas">Todas</button>
+            <button class="seg-btn" type="button" data-estado="pendiente">Pendientes</button>
+            <button class="seg-btn" type="button" data-estado="pagado">Pagadas</button>
+          </div>
           <div id="ventas-body" class="card-list"></div>
         </section>
-      </main>
+
+        <!-- CLIENTES -->
+        <section class="panel" data-panel="clientes">
+          <div class="panel-head"><h2>Clientes</h2></div>
+          <input id="cli-search" class="field search wide-search" type="search" placeholder="Buscar cliente o producto…" />
+          <div id="cli-body" class="card-list"></div>
+        </section>
+        </main>
+      </div>
     </div>
 
     <div id="modal-root" class="modal-root"></div>
@@ -95,15 +100,33 @@ import { API_URL } from '../scripts/admin-config';
 
     <script define:vars={{ API_URL }}>
       // ─── estado ────────────────────────────────────────────────────────────
+      // PIN numérico de acceso (puerta del panel). El backend usa su propia clave.
+      const PIN = '9908';
+      const BACKEND_PASS = 'macv2024';   // clave real del GAS — debe coincidir con ADMIN_PASSWORD en Code.gs
       const SS_PASS = 'macv_admin_pass';
-      let PASS = sessionStorage.getItem(SS_PASS) || '';
-      let DATA = { productos: [], ventas: [] };
+      const SS_DATA = 'macv_admin_data';
+      let PASS = localStorage.getItem(SS_PASS) || '';
+
+      // Caché local (stale-while-revalidate): al recargar pintamos lo último
+      // conocido al instante y refrescamos del servidor en segundo plano.
+      function loadCache() {
+        try { const raw = localStorage.getItem(SS_DATA); return raw ? JSON.parse(raw) : null; }
+        catch { return null; }
+      }
+      function saveCache() {
+        if (!DATA.productos.length && !DATA.ventas.length) return;   // no pisar con vacío
+        try { localStorage.setItem(SS_DATA, JSON.stringify(DATA)); } catch {}
+      }
+
+      let DATA = loadCache() || { productos: [], ventas: [] };
       let cart = [];
 
       const $ = (s, r = document) => r.querySelector(s);
       const fmt = (n) => '$ ' + (Number(n) || 0).toLocaleString('es-CO');
       const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const keyOf = (p) => `${p.producto}|${p.marca}|${p.color}|${p.talla}`;
+      // Estado de pago de una venta: solo 'pendiente' explícito cuenta; vacío/histórico = 'pagado'.
+      const estadoDe = (v) => String(v.estado || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado';
       const thumb = (p) => p.imagen
         ? `<img src="${esc(p.imagen)}" alt="${esc(p.marca)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'thumb-fb',textContent:'${esc((p.marca || p.producto || 'M')[0].toUpperCase())}'}))">`
         : `<span class="thumb-fb">${esc((p.marca || p.producto || 'M')[0].toUpperCase())}</span>`;
@@ -173,7 +196,7 @@ import { API_URL } from '../scripts/admin-config';
       async function entrar() {
         await validarClave();          // lanza si la clave es incorrecta
         await loadData();
-        sessionStorage.setItem(SS_PASS, PASS);
+        localStorage.setItem(SS_PASS, PASS);
         $('#login').hidden = true;
         $('#app').hidden = false;
         renderAll();
@@ -181,21 +204,37 @@ import { API_URL } from '../scripts/admin-config';
 
       $('#login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        PASS = $('#login-pass').value.trim();
         const err = $('#login-err');
-        const btn = e.target.querySelector('button');
+        const pinInput = $('#login-pin');
+        const pin = pinInput.value.trim();
+        // Puerta cliente: el PIN debe ser exacto antes de tocar el backend.
+        if (pin !== PIN) {
+          err.querySelector('span').textContent = 'PIN incorrecto.';
+          err.hidden = false;
+          pinInput.value = ''; pinInput.focus();
+          return;
+        }
+        PASS = BACKEND_PASS;   // por dentro autenticamos con la clave real del GAS
+        const btn = e.target.querySelector('button[type="submit"]');
         err.hidden = true; btn.disabled = true; btn.textContent = 'Entrando…';
         try {
           await entrar();
         } catch (e2) {
-          err.querySelector('span').textContent = /clave/i.test(e2.message) ? 'Clave incorrecta.' : 'No se pudo conectar. Revisa la URL del script.';
+          err.querySelector('span').textContent = /clave/i.test(e2.message) ? 'Clave del backend incorrecta.' : 'No se pudo conectar. Revisa la URL del script.';
           err.hidden = false;
         } finally { btn.disabled = false; btn.innerHTML = 'Entrar <i class="bi bi-arrow-right-short"></i>'; }
       });
 
-      // Mostrar / ocultar contraseña.
+      // Auto-entrar: en cuanto el PIN esté completo y sea correcto, enviamos solo.
+      $('#login-pin').addEventListener('input', () => {
+        const inp = $('#login-pin');
+        inp.value = inp.value.replace(/\D/g, '');   // solo dígitos
+        if (inp.value === PIN) $('#login-form').requestSubmit();
+      });
+
+      // Mostrar / ocultar PIN.
       $('#login-eye').addEventListener('click', () => {
-        const inp = $('#login-pass');
+        const inp = $('#login-pin');
         const mostrar = inp.type === 'password';
         inp.type = mostrar ? 'text' : 'password';
         $('#login-eye').firstElementChild.className = mostrar ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill';
@@ -203,7 +242,7 @@ import { API_URL } from '../scripts/admin-config';
       });
 
       $('#btn-logout').addEventListener('click', () => {
-        sessionStorage.removeItem(SS_PASS);
+        localStorage.removeItem(SS_PASS);
         location.reload();
       });
       $('#btn-refresh').addEventListener('click', async () => {
@@ -252,7 +291,7 @@ import { API_URL } from '../scripts/admin-config';
           const fieldsHTML = opts.fields.map((f) => {
             if (f.type === 'select') {
               const opts2 = f.options.map((o) => `<option value="${esc(o)}" ${o === f.value ? 'selected' : ''}>${esc(o)}</option>`).join('');
-              return `<label class="mfield">${esc(f.label)}<select name="${f.name}" class="field">${opts2}</select></label>`;
+              return `<label class="mfield">${esc(f.label)}<span class="select-wrap"><select name="${f.name}" class="field">${opts2}</select></span></label>`;
             }
             return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min ? `min="${f.min}"` : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
           }).join('');
@@ -360,22 +399,32 @@ import { API_URL } from '../scripts/admin-config';
       }
 
       // ─── render maestro ──────────────────────────────────────────────────────
-      function renderAll() { renderKPIs(); renderInventario(); renderVentas(); }
+      function renderAll() { renderKPIs(); renderInventario(); renderVentas(); renderClientes(); saveCache(); }
+
+      // Skeleton mientras carga la primera vez (aún sin caché).
+      function renderSkeleton() {
+        $('#kpis').innerHTML = Array.from({ length: 5 }).map(() => '<div class="kpi sk"><span class="sk-box"></span></div>').join('');
+        const rows = Array.from({ length: 4 }).map(() => '<div class="sk-card"></div>').join('');
+        const vb = $('#ventas-body'); if (vb) vb.innerHTML = rows;
+        const ib = $('#inv-body'); if (ib) ib.innerHTML = rows;
+      }
 
       // ─── KPIs ──────────────────────────────────────────────────────────────
       function renderKPIs() {
         const total = DATA.ventas.reduce((a, v) => a + (v.total || 0), 0);
+        const pendiente = DATA.ventas.filter((v) => estadoDe(v) === 'pendiente').reduce((a, v) => a + (v.total || 0), 0);
         const unidades = DATA.ventas.reduce((a, v) => a + (v.cantidad || 0), 0);
         const stockTotal = DATA.productos.reduce((a, p) => a + (p.stock || 0), 0);
         const agotados = DATA.productos.filter((p) => (p.stock || 0) <= 0).length;
         const cards = [
           { l: 'Total vendido', v: fmt(total), i: 'cash-stack' },
+          { l: 'Por cobrar', v: fmt(pendiente), i: 'hourglass-split', alert: pendiente > 0 },
           { l: 'Unidades vendidas', v: unidades, i: 'bag-check' },
           { l: 'Stock total', v: stockTotal, i: 'box-seam' },
           { l: 'Agotados', v: agotados, i: 'exclamation-triangle' },
         ];
         $('#kpis').innerHTML = cards.map((c) => `
-          <div class="kpi">
+          <div class="kpi${c.alert ? ' alert' : ''}">
             <i class="bi bi-${c.i}"></i>
             <div><span class="kpi-val">${c.v}</span><span class="kpi-lbl">${c.l}</span></div>
           </div>`).join('');
@@ -402,9 +451,15 @@ import { API_URL } from '../scripts/admin-config';
             <label class="mfield">Cliente
               <input id="v-cliente" class="field" type="text" placeholder="Nombre del cliente" autocomplete="off" />
             </label>
+            <div class="mfield">Estado de pago
+              <div class="seg seg--full" id="v-estado">
+                <button type="button" class="seg-btn active" data-estado="pagado">Pagada</button>
+                <button type="button" class="seg-btn" data-estado="pendiente">Pendiente</button>
+              </div>
+            </div>
             <div class="mfield">Productos
               <div class="vitem-add">
-                <select id="v-prod" class="field"></select>
+                <span class="select-wrap"><select id="v-prod" class="field"></select></span>
                 <button type="button" id="v-add" class="btn-ghost vitem-addbtn"><i class="bi bi-plus-lg"></i></button>
               </div>
             </div>
@@ -423,6 +478,13 @@ import { API_URL } from '../scripts/admin-config';
 
         // Cliente: combobox creable sobre los clientes de ventas anteriores.
         makeCombobox(root.querySelector('#v-cliente'), clientesList);
+
+        // Estado de pago: toggle de dos botones (Pagada / Pendiente).
+        root.querySelector('#v-estado').addEventListener('click', (e) => {
+          const b = e.target.closest('.seg-btn'); if (!b) return;
+          root.querySelector('#v-estado .seg-btn.active')?.classList.remove('active');
+          b.classList.add('active');
+        });
 
         function disponibles() {
           // stock restante descontando lo ya puesto en el modal
@@ -495,6 +557,7 @@ import { API_URL } from '../scripts/admin-config';
           const ok = await submit({
             action: 'sale', items: payloadItems,
             cliente: root.querySelector('#v-cliente').value.trim(),
+            estado: root.querySelector('#v-estado .seg-btn.active').dataset.estado,
           }, 'Venta registrada ✓');
           if (ok) closeModal();
           else { btn.disabled = false; btn.textContent = 'Guardar venta'; }
@@ -517,10 +580,10 @@ import { API_URL } from '../scripts/admin-config';
             <article class="inv-card${oos ? ' oos' : ''}" data-key="${k}">
               <div class="inv-thumb">${thumb(p)}</div>
               <div class="inv-main">
-                <div class="inv-title"><span class="inv-marca">${esc(p.marca)}</span><span class="inv-stock-pill ${oos ? 'zero' : ''}">${p.stock} u</span></div>
+                <div class="inv-title"><span class="inv-marca">${esc(p.marca)}</span></div>
                 <div class="inv-sub">${esc(p.producto)} · ${esc(p.color)} · ${esc(p.talla)}</div>
                 <div class="inv-nums">
-                  <span>Tienda <b>${fmt(p.precio)}</b></span>
+                  <span class="inv-units${oos ? ' zero' : ''}">Disponibles <b>${p.stock}</b></span>
                   <span>Vendidos <b>${p.vendidos}</b></span>
                 </div>
               </div>
@@ -573,44 +636,52 @@ import { API_URL } from '../scripts/admin-config';
         }
       });
 
-      // ─── NUEVO ─────────────────────────────────────────────────────────────
-      // Cada campo es un combobox creable que reútiliza los valores ya existentes
-      // del inventario (marcas, colores, tallas, categorías…).
-      ['producto', 'marca', 'color', 'talla', 'categoria'].forEach((campo) => {
-        const inp = $(`#form-nuevo [name="${campo}"]`);
-        if (inp) makeCombobox(inp, () => valoresProducto(campo));
-      });
-
-      $('#form-nuevo').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const o = {};
-        new FormData(e.target).forEach((v, k) => (o[k] = v));
+      // ─── NUEVO PRODUCTO (modal desde Inventario) ─────────────────────────────
+      // Cada campo de texto es un combobox creable que reutiliza los valores ya
+      // existentes del inventario (marcas, colores, tallas, categorías…).
+      async function abrirModalNuevo() {
+        const o = await modalForm({
+          title: 'Nuevo producto', confirm: 'Crear producto',
+          fields: [
+            { name: 'producto', label: 'Producto', combo: () => valoresProducto('producto'), placeholder: 'Boxer' },
+            { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Nike' },
+            { name: 'color', label: 'Color', combo: () => valoresProducto('color'), placeholder: 'Negro' },
+            { name: 'talla', label: 'Talla', combo: () => valoresProducto('talla'), placeholder: 'XL' },
+            { name: 'precio', label: 'Precio tienda', type: 'number', placeholder: '30000' },
+            { name: 'stock_inicial', label: 'Stock inicial', type: 'number', placeholder: '10' },
+            { name: 'categoria', label: 'Categoría', combo: () => valoresProducto('categoria'), placeholder: 'Ropa interior' },
+            { name: 'imagen', label: 'Imagen (URL)', placeholder: 'https://…' },
+          ],
+        });
+        if (!o) return;
+        if (!o.producto || !o.marca || !o.color || !o.talla || !o.precio) {
+          pill('Completa producto, marca, color, talla y precio', 'err');
+          return;
+        }
         // ¿Ya existe esta combinación producto/marca/color/talla? (sin distinguir mayúsculas)
         const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === keyOf(o).toLowerCase());
         const cant = parseInt(o.stock_inicial, 10) || 0;
-        const btn = e.target.querySelector('button[type="submit"]');
-        btn.disabled = true; btn.textContent = existente ? 'Sumando stock…' : 'Creando…';
-        try {
-          if (existente) {
-            // Ya existe → solo sumamos el stock indicado, no creamos fila nueva.
-            await post({ action: 'add_stock', producto: existente.producto, marca: existente.marca, color: existente.color, talla: existente.talla, cantidad: cant });
-            pill(`Ya existía — +${cant} al stock ✓`);
-          } else {
-            await post({ action: 'add_product', ...o });
-            pill('Producto creado ✓');
-          }
-          e.target.reset(); renderAll();
-        } catch (err) { pill(err.message, 'err'); }
-        finally { btn.disabled = false; btn.textContent = 'Crear producto'; }
-      });
+        if (existente) {
+          // Ya existe → solo sumamos el stock indicado, no creamos fila nueva.
+          await submit({ action: 'add_stock', producto: existente.producto, marca: existente.marca, color: existente.color, talla: existente.talla, cantidad: cant }, `Ya existía — +${cant} al stock ✓`);
+        } else {
+          await submit({ action: 'add_product', ...o }, 'Producto creado ✓');
+        }
+      }
+      $('#btn-nuevo').addEventListener('click', abrirModalNuevo);
 
       // ─── VENTAS ────────────────────────────────────────────────────────────
       function renderVentas() {
         const q = ($('#ventas-search')?.value || '').toLowerCase();
-        const v = [...DATA.ventas].reverse().filter((x) =>
-          !q || [x.cliente, x.producto, x.marca, x.color, x.talla].join(' ').toLowerCase().includes(q));
-        $('#ventas-body').innerHTML = v.map((x) => `
-          <article class="venta-card" data-id="${esc(x.id)}">
+        const filtro = $('#ventas-filtro .seg-btn.active')?.dataset.estado || 'todas';
+        const v = [...DATA.ventas].reverse()
+          .filter((x) => filtro === 'todas' || estadoDe(x) === filtro)
+          .filter((x) => !q || [x.cliente, x.producto, x.marca, x.color, x.talla].join(' ').toLowerCase().includes(q));
+        $('#ventas-body').innerHTML = v.map((x) => {
+          const est = estadoDe(x);
+          const pend = est === 'pendiente';
+          return `
+          <article class="venta-card ${est}" data-id="${esc(x.id)}">
             <div class="venta-head">
               <span class="venta-cliente">${x.cliente ? esc(x.cliente) : '<i>Sin cliente</i>'}</span>
               <span class="venta-total">${fmt(x.total)}</span>
@@ -619,16 +690,72 @@ import { API_URL } from '../scripts/admin-config';
             <div class="venta-foot">
               <span class="venta-fecha">${esc(x.fecha)}</span>
               <span class="venta-tags">
+                <span class="v-estado ${est}">${pend ? 'Pendiente' : 'Pagado'}</span>
                 <span class="tag">${x.cantidad} u</span>
               </span>
             </div>
             <div class="venta-actions">
+              ${pend
+                ? `<button class="mini pay" data-act="pay" title="Marcar pagada"><i class="bi bi-check-lg"></i> Pagar</button>`
+                : `<button class="mini" data-act="unpay" title="Marcar pendiente"><i class="bi bi-arrow-counterclockwise"></i></button>`}
               <button class="mini" data-act="edit" title="Editar"><i class="bi bi-pencil"></i></button>
               <button class="mini danger" data-act="del" title="Eliminar"><i class="bi bi-trash"></i></button>
             </div>
-          </article>`).join('') || '<p class="empty">Aún no hay ventas.</p>';
+          </article>`;
+        }).join('') || '<p class="empty">No hay ventas con este filtro.</p>';
       }
       document.addEventListener('input', (e) => { if (e.target.id === 'ventas-search') renderVentas(); });
+      // Filtro por estado (segmented control).
+      $('#ventas-filtro').addEventListener('click', (e) => {
+        const b = e.target.closest('.seg-btn'); if (!b) return;
+        $('#ventas-filtro .seg-btn.active')?.classList.remove('active');
+        b.classList.add('active');
+        renderVentas();
+      });
+
+      // ─── CLIENTES ──────────────────────────────────────────────────────────
+      // Agrupa las ventas por cliente y resume qué productos compró cada uno.
+      // (DATA.ventas viene en orden cronológico, así que la última iteración
+      //  de cada cliente es su compra más reciente.)
+      function renderClientes() {
+        const q = ($('#cli-search')?.value || '').toLowerCase();
+        const map = new Map();
+        DATA.ventas.forEach((v) => {
+          const nombre = String(v.cliente ?? '').trim();
+          if (!nombre) return;   // ignoramos ventas sin cliente
+          const k = nombre.toLowerCase();
+          if (!map.has(k)) map.set(k, { nombre, total: 0, unidades: 0, compras: 0, ultima: '', prods: new Map() });
+          const c = map.get(k);
+          c.total += v.total || 0;
+          c.unidades += v.cantidad || 0;
+          c.compras += 1;
+          if (v.fecha) c.ultima = v.fecha;   // último en el tiempo (orden cronológico)
+          const pk = `${v.marca} · ${v.color} · ${v.talla}`;
+          c.prods.set(pk, (c.prods.get(pk) || 0) + (v.cantidad || 0));
+        });
+        let lista = [...map.values()].sort((a, b) => b.total - a.total);
+        if (q) lista = lista.filter((c) =>
+          c.nombre.toLowerCase().includes(q) || [...c.prods.keys()].some((p) => p.toLowerCase().includes(q)));
+
+        $('#cli-body').innerHTML = lista.map((c) => {
+          const chips = [...c.prods.entries()]
+            .map(([p, n]) => `<span class="cli-prod">${esc(p)} <b>×${n}</b></span>`).join('');
+          return `
+            <article class="cli-card">
+              <div class="cli-head">
+                <span class="cli-name">${esc(c.nombre)}</span>
+                <span class="cli-total">${fmt(c.total)}</span>
+              </div>
+              <div class="cli-stats">
+                <span>Compras <b>${c.compras}</b></span>
+                <span>Unidades <b>${c.unidades}</b></span>
+                ${c.ultima ? `<span>Última <b>${esc(c.ultima)}</b></span>` : ''}
+              </div>
+              <div class="cli-prods">${chips}</div>
+            </article>`;
+        }).join('') || '<p class="empty">Aún no hay clientes registrados.</p>';
+      }
+      document.addEventListener('input', (e) => { if (e.target.id === 'cli-search') renderClientes(); });
 
       $('#ventas-body').addEventListener('click', async (e) => {
         const b = e.target.closest('button'); if (!b) return;
@@ -636,6 +763,15 @@ import { API_URL } from '../scripts/admin-config';
         const x = DATA.ventas.find((v) => String(v.id) === card.dataset.id);
         if (!x) return;
         const ref = `${x.marca} · ${x.color} · ${x.talla}`;
+
+        if (b.dataset.act === 'pay') {
+          await submit({ action: 'set_estado', id: x.id, estado: 'pagado' }, 'Marcada como pagada ✓');
+          return;
+        }
+        if (b.dataset.act === 'unpay') {
+          await submit({ action: 'set_estado', id: x.id, estado: 'pendiente' }, 'Marcada como pendiente');
+          return;
+        }
 
         if (b.dataset.act === 'edit') {
           const v = await modalForm({
@@ -658,22 +794,45 @@ import { API_URL } from '../scripts/admin-config';
 
       // ─── auto-login si ya hay clave ──────────────────────────────────────────
       (async () => {
-        if (PASS) {
-          try { await entrar(); }
-          catch { sessionStorage.removeItem(SS_PASS); /* clave guardada inválida → mostrar login */ }
+        if (!PASS) return;
+        const tieneCache = DATA.productos.length > 0 || DATA.ventas.length > 0;
+        $('#login').hidden = true; $('#app').hidden = false;
+        // Pinta al instante: caché si la hay, si no un skeleton.
+        if (tieneCache) renderAll(); else renderSkeleton();
+        // Refresca del servidor en segundo plano.
+        try {
+          await loadData();
+          renderAll();
+        } catch {
+          if (!tieneCache) {
+            // Sin caché y sin conexión → volver al login.
+            localStorage.removeItem(SS_PASS);
+            document.documentElement.classList.remove('authed');
+            $('#login').hidden = false; $('#app').hidden = true;
+          } else {
+            pill('Mostrando datos guardados — sin conexión', 'err');
+          }
         }
       })();
     </script>
 
     <style is:global>
       *, *::before, *::after { box-sizing: border-box; }
+      /* Anulamos el flex-center de global.css (pensado para el sitio, no el panel):
+         si no, centra el #app y deja franjas a los lados. */
       body {
-        margin: 0;
+        margin: 0; display: block;
         font-family: var(--font-body);
         background: var(--bone-100);
         color: var(--fg);
         -webkit-font-smoothing: antialiased;
       }
+      /* .content es un <main>: global.css lo vuelve flex-centrado; lo dejamos block. */
+      .content { display: block; width: 100%; }
+
+      /* Sesión activa: sin parpadeo del login al recargar (clase puesta en <head>). */
+      html.authed #login { display: none; }
+      html.authed #app { display: block; }
 
       /* ── LOGIN ── */
       .login {
@@ -700,7 +859,7 @@ import { API_URL } from '../scripts/admin-config';
         border: 2px solid var(--carbon-900);
         box-shadow: var(--shadow-press);
       }
-      .login-mark img { width: 60px; height: 60px; object-fit: contain; }
+      .login-mark img { width: 60px; height: 60px; object-fit: contain; filter: invert(1); }
       .login-logo { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1; }
       .login-logo span { color: var(--blood-600); }
       .login-sub { margin: 0 0 var(--space-2); color: var(--fg-muted); font-size: .85rem; }
@@ -716,6 +875,12 @@ import { API_URL } from '../scripts/admin-config';
         background: var(--bone-50); color: var(--fg);
       }
       .login-field input:focus { outline: none; box-shadow: var(--focus-ring); }
+      .login-pin {
+        text-align: center; font-family: var(--font-mono);
+        font-size: 1.5rem; letter-spacing: .5em; padding-inline: 42px 42px;
+        text-indent: .5em; /* compensa el letter-spacing del último dígito para centrar */
+      }
+      .login-pin::placeholder { letter-spacing: .15em; font-size: 1.1rem; opacity: .5; }
       .login-eye {
         position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
         width: 34px; height: 34px; display: grid; place-items: center;
@@ -724,23 +889,56 @@ import { API_URL } from '../scripts/admin-config';
       .login-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
       .login-btn i { font-size: 1.3rem; }
       .login-err { display: inline-flex; align-items: center; gap: 6px; color: var(--blood-600); font-size: .82rem; }
-
-      /* ── LAYOUT ── */
-      .app { min-height: 100vh; }
-      .topbar {
-        position: sticky; top: 0; z-index: 30;
-        display: flex; align-items: center; justify-content: space-between;
-        padding: var(--space-3) var(--space-4);
-        background: var(--carbon-900); color: var(--bone-50);
+      .login-back {
+        display: inline-flex; align-items: center; gap: 2px;
+        margin-top: var(--space-1); color: var(--fg-muted);
+        font-size: .82rem; text-decoration: none; transition: var(--transition);
       }
-      .brand { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; }
+      .login-back i { font-size: 1.15rem; }
+
+      /* ── LAYOUT (móvil-first: sidebar = barra superior; desktop = columna lateral) ── */
+      .app { min-height: 100vh; }
+
+      .sidebar {
+        position: sticky; top: 0; z-index: 30;
+        background: var(--carbon-900); color: var(--bone-50);
+        border-bottom: 2px solid var(--blood-600);
+      }
+      .sidebar-head {
+        display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+        padding: var(--space-3) var(--space-4);
+      }
+      .brand {
+        display: flex; align-items: center; gap: var(--space-2);
+        font-family: var(--font-display); font-size: 1.4rem; letter-spacing: .02em; line-height: 1;
+      }
+      .brand-mark { height: 26px; width: auto; filter: invert(1); }
       .brand span, .login-logo span { color: var(--blood-600); }
-      .topbar-actions { display: flex; gap: var(--space-2); }
+      .sidebar-actions { display: flex; gap: var(--space-2); }
       .icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
         background: transparent; border: 1px solid rgba(255,255,255,.25);
         color: var(--bone-50); width: 38px; height: 38px; border-radius: 0;
-        cursor: pointer; font-size: 1.05rem; transition: var(--transition);
+        cursor: pointer; font-size: 1.05rem; transition: var(--transition); text-decoration: none;
       }
+
+      /* NAV de pestañas */
+      .side-nav {
+        display: flex; gap: 0; overflow-x: auto;
+        border-top: 1px solid rgba(255,255,255,.1);
+      }
+      .tab {
+        flex: 0 0 auto;
+        display: inline-flex; align-items: center; gap: 6px;
+        background: transparent; border: none; border-bottom: 3px solid transparent;
+        padding: var(--space-3) var(--space-4); cursor: pointer;
+        font-family: var(--font-body); font-weight: 600; font-size: .9rem;
+        color: var(--bone-400); white-space: nowrap; transition: var(--transition);
+      }
+      .tab i { font-size: 1rem; }
+      .tab.active { color: var(--bone-50); border-bottom-color: var(--blood-600); }
+
+      .main { min-width: 0; }
 
       /* ── KPIs ── */
       .kpis {
@@ -753,24 +951,11 @@ import { API_URL } from '../scripts/admin-config';
         padding: var(--space-3) var(--space-4); box-shadow: var(--shadow-sm);
       }
       .kpi i { font-size: 1.5rem; color: var(--blood-600); }
+      .kpi.alert { border-color: var(--blood-600); border-left-width: 3px; }
+      .kpi.alert .kpi-val { color: var(--blood-600); }
       .kpi > div { display: flex; flex-direction: column; min-width: 0; }
       .kpi-val { font-family: var(--font-display); font-size: 1.4rem; line-height: 1.1; }
       .kpi-lbl { font-size: .72rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em; }
-
-      /* ── TABS ── */
-      .tabs {
-        display: flex; gap: 0; overflow-x: auto;
-        padding: 0 var(--space-4); border-bottom: 1px solid var(--border);
-        background: var(--bone-100);
-      }
-      .tab {
-        flex: 0 0 auto;
-        background: transparent; border: none; border-bottom: 3px solid transparent;
-        padding: var(--space-3) var(--space-4); cursor: pointer;
-        font-family: var(--font-body); font-weight: 600; font-size: .9rem;
-        color: var(--fg-muted); white-space: nowrap; transition: var(--transition);
-      }
-      .tab.active { color: var(--fg); border-bottom-color: var(--blood-600); }
 
       /* ── PANELS ── */
       .content { padding: var(--space-5) var(--space-4) var(--space-8); }
@@ -789,6 +974,21 @@ import { API_URL } from '../scripts/admin-config';
       }
       .field:focus { outline: none; box-shadow: var(--focus-ring); }
       .search { max-width: 320px; }
+
+      /* ── SELECT: quitamos la flecha nativa (va pegada al borde) y ponemos
+         una propia con espacio controlado. El wrapper la dibuja con un
+         triángulo CSS coloreado con variables. ── */
+      .select-wrap { position: relative; display: block; }
+      select.field {
+        appearance: none; -webkit-appearance: none; -moz-appearance: none;
+        padding-right: 36px; cursor: pointer;
+      }
+      .select-wrap::after {
+        content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+        width: 0; height: 0; pointer-events: none;
+        border-left: 5px solid transparent; border-right: 5px solid transparent;
+        border-top: 6px solid var(--fg);
+      }
 
       /* ── COMBOBOX (autocompletar + crear) ── */
       .combo { position: relative; }
@@ -811,6 +1011,7 @@ import { API_URL } from '../scripts/admin-config';
       .combo-create strong { color: var(--fg); }
 
       .btn-primary {
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
         font-family: var(--font-body); font-weight: 700; font-size: .92rem;
         padding: 11px 18px; border: 2px solid var(--carbon-900);
         background: var(--blood-600); color: #fff; cursor: pointer;
@@ -846,7 +1047,7 @@ import { API_URL } from '../scripts/admin-config';
       .sku-stock { font-size: .72rem; color: var(--fg-muted); }
 
       /* ── CARD LIST (inventario / ventas) ── */
-      .card-list { display: flex; flex-direction: column; gap: var(--space-3); }
+      .card-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); align-items: start; }
 
       .inv-card {
         display: grid; grid-template-columns: 60px 1fr auto; gap: var(--space-3);
@@ -858,10 +1059,10 @@ import { API_URL } from '../scripts/admin-config';
       .inv-main { min-width: 0; }
       .inv-title { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; }
       .inv-marca { font-family: var(--font-display); font-size: 1.1rem; }
-      .inv-stock-pill { font-size: .72rem; font-weight: 700; padding: 2px 8px; background: var(--olive-600); color: #fff; border-radius: 999px; }
-      .inv-stock-pill.zero { background: var(--blood-600); }
+      /* "Disponibles" luce igual que "Vendidos"; solo se pinta de rojo si está agotado. */
+      .inv-units.zero, .inv-units.zero b { color: var(--blood-600); }
       .inv-sub { font-size: .76rem; color: var(--fg-muted); margin: 2px 0 6px; }
-      .inv-nums { display: flex; flex-wrap: wrap; gap: 4px var(--space-3); font-size: .74rem; color: var(--fg-muted); }
+      .inv-nums { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--space-3); font-size: .74rem; color: var(--fg-muted); }
       .inv-nums b { color: var(--fg); }
       .inv-actions { display: flex; flex-direction: column; gap: 6px; }
 
@@ -874,9 +1075,49 @@ import { API_URL } from '../scripts/admin-config';
       .venta-sub { font-size: .78rem; color: var(--fg-muted); margin: 2px 0 8px; }
       .venta-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
       .venta-fecha { font-family: var(--font-mono); font-size: .72rem; color: var(--fg-muted); }
-      .venta-tags { display: flex; gap: 6px; }
+      .venta-tags { display: flex; align-items: center; gap: 6px; }
       .tag { font-size: .7rem; padding: 2px 8px; background: var(--bone-200); border-radius: 999px; }
       .tag.pos { background: rgba(90,90,46,.15); color: var(--olive-700); font-weight: 700; }
+
+      /* ── ESTADO DE PAGO ── */
+      /* borde izquierdo de la tarjeta indica el estado */
+      .venta-card.pendiente { border-left-color: var(--blood-600); }
+      .v-estado {
+        font-family: var(--font-mono); font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+        padding: 3px 8px; border: 1px solid; white-space: nowrap;
+      }
+      .v-estado.pagado { border-color: var(--olive-600); background: rgba(90, 90, 46, .12); color: var(--olive-700); }
+      .v-estado.pendiente { border-color: var(--blood-600); background: rgba(176, 41, 31, .1); color: var(--blood-600); }
+      /* botón "Pagar": más ancho (lleva texto) y en oliva */
+      .mini.pay {
+        display: inline-flex; align-items: center; gap: 4px; width: auto; padding: 0 10px;
+        font-family: var(--font-body); font-weight: 700; font-size: .78rem;
+        border-color: var(--olive-600); color: var(--olive-700);
+      }
+
+      /* ── SEGMENTED CONTROL (filtro de estado) ── */
+      .seg { display: inline-flex; margin-bottom: var(--space-4); border: 1px solid var(--border-strong); }
+      .seg-btn {
+        font-family: var(--font-body); font-weight: 600; font-size: .82rem;
+        padding: 7px 14px; border: none; border-right: 1px solid var(--border-strong);
+        background: var(--bone-50); color: var(--fg-muted); cursor: pointer; transition: var(--transition);
+      }
+      .seg-btn:last-child { border-right: none; }
+      .seg-btn.active { background: var(--carbon-900); color: var(--bone-50); }
+      /* variante ancho completo (modal de venta) */
+      .seg--full { display: flex; margin-bottom: 0; }
+      .seg--full .seg-btn { flex: 1; text-align: center; padding-block: 9px; }
+
+      /* ── CLIENTES ── */
+      .cli-card { padding: var(--space-4); background: var(--bone-50); border: 1px solid var(--border-strong); border-left: 3px solid var(--carbon-900); }
+      .cli-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+      .cli-name { font-family: var(--font-display); font-size: 1.2rem; }
+      .cli-total { font-weight: 700; }
+      .cli-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--space-3); font-size: .74rem; color: var(--fg-muted); margin: 4px 0 var(--space-3); }
+      .cli-stats b { color: var(--fg); }
+      .cli-prods { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+      .cli-prod { font-size: .74rem; padding: 4px 9px; background: var(--bone-100); border: 1px solid var(--border); }
+      .cli-prod b { color: var(--blood-600); }
 
       /* ── CART ── */
       .cart {
@@ -899,6 +1140,23 @@ import { API_URL } from '../scripts/admin-config';
       .mini { width: 34px; height: 34px; border: 1px solid var(--border-strong); background: var(--bone-100); cursor: pointer; }
       .mini.danger { color: var(--blood-600); }
       .empty { text-align: center; color: var(--fg-muted); padding: var(--space-6); }
+
+      /* ── SKELETON (carga inicial) ── */
+      .kpi.sk { padding: 0; border-color: var(--border); }
+      .sk-box, .sk-card {
+        position: relative; overflow: hidden;
+        background: var(--bone-200); border: 1px solid var(--border);
+      }
+      .sk-box { display: block; width: 100%; height: 72px; border: none; }
+      .sk-card { height: 92px; }
+      .sk-box::after, .sk-card::after {
+        content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(251, 248, 242, .65), transparent);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .sk-box::after, .sk-card::after { animation: sk-shimmer 1.2s ease-in-out infinite; }
+      }
+      @keyframes sk-shimmer { 100% { transform: translateX(100%); } }
 
       /* ── MODAL ── */
       .modal-root { display: none; }
@@ -927,7 +1185,7 @@ import { API_URL } from '../scripts/admin-config';
 
       /* ── modal Agregar venta ── */
       .vitem-add { display: flex; gap: var(--space-2); }
-      .vitem-add .field { flex: 1; }
+      .vitem-add .select-wrap { flex: 1; }
       .vitem-addbtn { padding: 0 14px; flex: 0 0 auto; }
       .vitem-list { display: flex; flex-direction: column; gap: var(--space-2); }
       .vitem { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--space-2); align-items: center; font-size: .85rem; padding: var(--space-2); background: var(--bone-100); border: 1px solid var(--border); }
@@ -939,11 +1197,6 @@ import { API_URL } from '../scripts/admin-config';
       .vitem-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: var(--space-2); border-top: 1px solid var(--border-strong); font-size: .9rem; }
       .vitem-total strong { font-family: var(--font-display); font-size: 1.4rem; }
       .wide-search { max-width: none; margin-bottom: var(--space-4); }
-
-      /* ── FORM ── */
-      .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); max-width: 640px; }
-      .form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; font-weight: 600; color: var(--fg-muted); }
-      .form-grid .wide { grid-column: 1 / -1; }
 
       /* ── PILL ── */
       .pill {
@@ -959,17 +1212,54 @@ import { API_URL } from '../scripts/admin-config';
         .icon-btn:hover { background: rgba(255,255,255,.12); }
         .btn-primary:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--carbon-900); }
         .sku-card:not(.oos):hover { transform: translateY(-2px); box-shadow: var(--shadow-press); }
-        .tab:hover { color: var(--fg); }
+        .tab:hover:not(.active) { color: var(--bone-50); }
         .mini:hover { background: var(--bone-300); }
+        .mini.pay:hover { background: rgba(90, 90, 46, .12); }
+        .seg-btn:hover:not(.active) { color: var(--fg); background: var(--bone-100); }
         .btn-ghost:hover { background: var(--bone-200); }
         .combo-opt:hover { background: var(--bone-200); }
         .login-eye:hover { color: var(--fg); }
+        .login-back:hover { color: var(--fg); }
       }
 
       @media (min-width: 750px) {
-        .kpis { grid-template-columns: repeat(5, 1fr); }
+        /* Sidebar vertical fija a la izquierda + main que llena el resto.
+           Incluimos html.authed #app para ganarle a la regla anti-parpadeo. */
+        .app, html.authed #app { display: flex; align-items: flex-start; }
+        .sidebar {
+          width: 232px; flex: 0 0 232px; align-self: stretch;
+          min-height: 100vh; height: 100vh;
+          display: flex; flex-direction: column;
+          border-bottom: none; border-right: 2px solid var(--blood-600);
+        }
+        .sidebar-head {
+          flex-direction: column; align-items: flex-start; gap: var(--space-4);
+          padding: var(--space-5) var(--space-5) var(--space-4);
+          border-bottom: 1px solid rgba(255,255,255,.1);
+        }
+        .side-nav { flex-direction: column; overflow: visible; border-top: none; padding-top: var(--space-2); }
+        .tab {
+          width: 100%; justify-content: flex-start;
+          border-bottom: none; border-left: 3px solid transparent;
+          padding: var(--space-3) var(--space-5);
+        }
+        .tab.active { border-bottom: none; border-left-color: var(--blood-600); background: rgba(255,255,255,.06); }
+
+        /* Acciones (tienda/refresh/salir) ancladas al fondo de la sidebar, solas.
+           La sidebar es position:sticky → sirve de contenedor para el absolute. */
+        .sidebar-actions {
+          position: absolute; left: 0; right: 0; bottom: 0;
+          justify-content: center; gap: var(--space-3);
+          padding: var(--space-4);
+        }
+
+        .main { flex: 1 1 auto; min-width: 0; }
+        .kpis { grid-template-columns: repeat(5, 1fr); padding-inline: var(--space-6); }
         .content { padding-inline: var(--space-6); }
-        .topbar, .kpis, .tabs { padding-inline: var(--space-6); }
+
+        /* Cards en grid: varias por fila, aprovechando el ancho */
+        .card-list { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-4); }
+
         .sku-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
         .inv-card { grid-template-columns: 72px 1fr auto; }
         .inv-thumb { width: 72px; height: 72px; }

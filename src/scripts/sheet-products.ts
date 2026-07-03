@@ -131,6 +131,15 @@ const state = {
   filters: { brand: '', size: '', color: '', onlyStock: false, search: '' },
 };
 
+// ─── auto-rotate color timers ───────────────────────────────────────────────
+
+let cardTimers: ReturnType<typeof setInterval>[] = [];
+
+function clearCardTimers() {
+  cardTimers.forEach(clearInterval);
+  cardTimers = [];
+}
+
 // ─── grouped card ─────────────────────────────────────────────────────────────
 
 function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
@@ -195,11 +204,24 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
     });
   }
 
+  let prevIdx = 0;
+
   function updateColor(idx: number) {
     const c = gp.colors[idx];
     visualEl.style.background = `linear-gradient(150deg,${c.hex}44 0%,${c.hex}18 100%)`;
     if (c.imagen) {
-      imgEl.src = c.imagen;
+      if (imgEl.src !== c.imagen) {
+        // color nuevo a la derecha del actual → entra desde la derecha, y viceversa
+        const dirClass = idx >= prevIdx ? 'from-right' : 'from-left';
+        const playIn = () => {
+          imgEl.removeEventListener('load', playIn);
+          imgEl.classList.remove('from-right', 'from-left');
+          void imgEl.offsetWidth; // reflow → reinicia la animación
+          imgEl.classList.add(dirClass);
+        };
+        imgEl.addEventListener('load', playIn);
+        imgEl.src = c.imagen;
+      }
       imgEl.style.display = '';
       initialEl.style.display = 'none';
     } else {
@@ -214,6 +236,7 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
     el.classList.toggle('oos', !colorHasStock);
 
     renderSizes(c.name);
+    prevIdx = idx;
   }
 
   el.querySelectorAll('.sc-colordot').forEach((dot, idx) => {
@@ -223,7 +246,38 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
   const initIdx = state.filters.color
     ? Math.max(0, gp.colors.findIndex(c => c.name.toLowerCase() === state.filters.color.toLowerCase()))
     : 0;
+  prevIdx = initIdx;
   updateColor(initIdx);
+
+  // auto-rotar entre colores con stock → mostrar que hay más variantes
+  const stockIdxs = gp.colors
+    .map((_, idx) => idx)
+    .filter(idx => gp.skus.some(s => s.color === gp.colors[idx].name && parseInt(s.stock, 10) > 0));
+
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  if (stockIdxs.length > 1 && !reduceMotion) {
+    let cur = initIdx;
+    let paused = false;
+    let stopped = false;
+
+    el.addEventListener('mouseenter', () => { paused = true; });
+    el.addEventListener('mouseleave', () => { paused = false; });
+    // si el usuario elige un color manualmente, dejar de rotar
+    el.querySelectorAll('.sc-colordot').forEach(dot =>
+      dot.addEventListener('click', () => { stopped = true; })
+    );
+
+    const timer = setInterval(() => {
+      if (paused || stopped || !el.isConnected) return;
+      const pos = stockIdxs.indexOf(cur);
+      cur = stockIdxs[(pos + 1) % stockIdxs.length];
+      updateColor(cur);
+    }, 5200 + (i % 5) * 700); // escalonar para que no parpadeen todas a la vez
+
+    cardTimers.push(timer);
+  }
+
   return el;
 }
 
@@ -261,6 +315,7 @@ function render() {
     return true;
   });
 
+  clearCardTimers();
   grid.innerHTML = '';
 
   if (filtered.length === 0) {
@@ -315,6 +370,7 @@ async function initGrid(gridId: string, limit: number, select: (ps: SheetProduct
   try {
     const skus = select(await fetchProducts());
     const grouped = groupProducts(skus);
+    clearCardTimers();
     grid.innerHTML = '';
     grouped.slice(0, limit).forEach((gp, i) => grid.appendChild(buildGroupedCard(gp, i)));
   } catch (err) {

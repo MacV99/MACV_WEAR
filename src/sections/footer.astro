@@ -42,7 +42,10 @@
 
   <div class="container footer-bottom flex-row">
     <span class="copy">©2025 MacV Wear — Todos los derechos reservados.</span>
-    <span class="made">Hecho en Colombia 🇨🇴</span>
+    <span class="footer-end flex-row">
+      <span class="made">Hecho en Colombia 🇨🇴</span>
+      <a href="/admin" class="admin-link" aria-label="Panel de administración" title="Panel"><i class="bi bi-lock-fill"></i></a>
+    </span>
   </div>
 </footer>
 
@@ -154,6 +157,21 @@
     color: var(--carbon-300);
   }
 
+  .footer-end {
+    gap: 14px;
+    align-items: center;
+  }
+
+  .admin-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--carbon-300);
+    font-size: 12px;
+    opacity: 0.4;
+    transition: var(--transition);
+  }
+
   @media (hover: hover) {
     .socials a:hover {
       background: rgba(255, 255, 255, 0.06);
@@ -161,6 +179,11 @@
     }
 
     .col a:hover {
+      color: var(--bone-50);
+    }
+
+    .admin-link:hover {
+      opacity: 1;
       color: var(--bone-50);
     }
   }

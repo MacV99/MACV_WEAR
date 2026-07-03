@@ -27,7 +27,7 @@ var REQUIRED_COLS = [
 
 var VENTA_COLS = [
   'id', 'fecha', 'producto', 'marca', 'color', 'talla',
-  'cantidad', 'precio_unit', 'total', 'costo_unit', 'ganancia', 'metodo_pago', 'cliente'
+  'cantidad', 'precio_unit', 'total', 'costo_unit', 'ganancia', 'metodo_pago', 'cliente', 'estado'
 ];
 
 // ─── Entradas HTTP ──────────────────────────────────────────────────────────
@@ -69,6 +69,7 @@ function route(body) {
     case 'update_product': return updateProduct(body);
     case 'delete_product': return deleteProduct(body);
     case 'update_venta':   return updateVenta(body);
+    case 'set_estado':     return setEstado(body);
     case 'delete_venta':   return deleteVenta(body);
     default: return { ok: false, error: 'Acción desconocida: ' + body.action };
   }
@@ -91,6 +92,14 @@ function ventasSheet() {
   if (!s) {
     s = ss().insertSheet(VENTAS_SHEET);
     s.appendRow(VENTA_COLS);
+    return s;
+  }
+  // Migración: si la hoja ya existía sin 'estado', la agregamos al final.
+  var lastCol = s.getLastColumn();
+  var headers = s.getRange(1, 1, 1, lastCol).getValues()[0]
+    .map(function (h) { return String(h).trim().toLowerCase(); });
+  if (headers.indexOf('estado') === -1) {
+    s.getRange(1, lastCol + 1).setValue('estado');
   }
   return s;
 }
@@ -165,7 +174,9 @@ function readAll() {
       costo_unit:  toNum(vv[i][9]),
       ganancia:    toNum(vv[i][10]),
       metodo_pago: String(vv[i][11] || ''),
-      cliente:     String(vv[i][12] || '')
+      cliente:     String(vv[i][12] || ''),
+      // Vacío (ventas históricas) se trata como 'pagado'.
+      estado:      String(vv[i][13] || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado'
     });
   }
 
@@ -209,6 +220,7 @@ function registerSale(body) {
   var vs = ventasSheet();
   var metodo = body.metodo_pago || '';
   var cliente = body.cliente || '';
+  var estado = String(body.estado || 'pagado').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado';
   var registradas = [];
 
   for (var i = 0; i < items.length; i++) {
@@ -237,7 +249,7 @@ function registerSale(body) {
       id, new Date(),
       p.values[r][p.col['producto']], p.values[r][p.col['marca']],
       p.values[r][p.col['color']], p.values[r][p.col['talla']],
-      cant, precio, total, costo, gan, metodo, cliente
+      cant, precio, total, costo, gan, metodo, cliente, estado
     ]);
     registradas.push(id);
   }
@@ -324,6 +336,17 @@ function ajustarVendidos(producto, marca, color, talla, delta) {
   var nuevo = Math.max(0, toNum(p.values[r][p.col['vendidos']]) + delta);
   setCell(p, r, 'vendidos', nuevo);
   recompute(p, r);
+}
+
+// Marca una venta como pagada / pendiente (no toca stock ni totales).
+function setEstado(body) {
+  var vs = ventasSheet();
+  var found = findVentaRow(vs, body.id);
+  if (!found) return { ok: false, error: 'Venta no encontrada' };
+  var estado = String(body.estado || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado';
+  var col = VENTA_COLS.indexOf('estado') + 1;   // 1-based
+  vs.getRange(found.row, col).setValue(estado);
+  return { ok: true, data: readAll() };
 }
 
 function deleteVenta(body) {
