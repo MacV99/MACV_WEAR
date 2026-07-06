@@ -39,12 +39,13 @@ const features = [
     min-width: 200px;
     gap: 12px;
     padding: 20px 24px;
-    border-right: 1px solid var(--border);
+    /* Móvil: las tarjetas se apilan → separador inferior (no lateral suelto). */
+    border-bottom: 1px solid var(--border);
     justify-content: flex-start;
   }
 
   .feature-item:last-child {
-    border-right: none;
+    border-bottom: none;
   }
 
   .feature-icon {
@@ -79,6 +80,13 @@ const features = [
     .feature-item {
       min-width: 0;
       justify-content: center;
+      /* Escritorio: en fila → separador lateral entre columnas. */
+      border-bottom: none;
+      border-right: 1px solid var(--border);
+    }
+
+    .feature-item:last-child {
+      border-right: none;
     }
   }
 </style>

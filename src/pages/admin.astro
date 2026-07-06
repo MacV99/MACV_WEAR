@@ -8,11 +8,20 @@ import { API_URL } from '../scripts/admin-config';
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Panel — MacV Wear</title>
     <link rel="icon" type="image/avif" href="/img/logo-mark.avif" />
-    <link rel="apple-touch-icon" href="/img/logo-mark.avif" />
+
+    <!-- ── PWA (instalable como app, solo el panel) ── -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0a0908" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="MacV Panel" />
+    <link rel="apple-touch-icon" href="/img/icon-192.png" />
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <!-- Marca la sesión ANTES de pintar → sin parpadeo del login al recargar. -->
     <script is:inline>
@@ -33,6 +42,8 @@ import { API_URL } from '../scripts/admin-config';
         </div>
         <button type="submit" class="btn-primary login-btn">Entrar <i class="bi bi-arrow-right-short"></i></button>
         <span id="login-err" class="login-err" hidden><i class="bi bi-exclamation-circle-fill"></i> <span></span></span>
+        <button type="button" id="install-btn" class="login-install" hidden><i class="bi bi-download"></i> Instalar app</button>
+        <p id="ios-install-hint" class="login-ios-hint" hidden>Para instalar: toca <i class="bi bi-box-arrow-up"></i> y luego «Agregar a inicio».</p>
         <a href="/" class="login-back"><i class="bi bi-arrow-left-short"></i> Volver a la tienda</a>
       </form>
     </div>
@@ -43,6 +54,7 @@ import { API_URL } from '../scripts/admin-config';
         <div class="sidebar-head">
           <div class="brand"><img class="brand-mark" src="/img/logo-mark.avif" alt="" width="28" height="28" />MacV<span>·</span>Panel</div>
           <div class="sidebar-actions">
+            <button id="btn-install" class="icon-btn" title="Instalar app" hidden><i class="bi bi-download"></i></button>
             <a href="/" class="icon-btn" title="Volver a la tienda"><i class="bi bi-shop"></i></a>
             <button id="btn-refresh" class="icon-btn" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
             <button id="btn-logout" class="icon-btn" title="Salir"><i class="bi bi-box-arrow-right"></i></button>
@@ -297,14 +309,15 @@ import { API_URL } from '../scripts/admin-config';
       function modalForm(opts) {
         return new Promise((resolve) => {
           const fieldsHTML = opts.fields.map((f) => {
+            const cls = 'mfield' + (f.half ? ' half' : '');   // half → media fila (grid de 2 columnas)
             if (f.type === 'select') {
               const opts2 = f.options.map((o) => `<option value="${esc(o)}" ${o === f.value ? 'selected' : ''}>${esc(o)}</option>`).join('');
-              return `<label class="mfield">${esc(f.label)}<span class="select-wrap"><select name="${f.name}" class="field">${opts2}</select></span></label>`;
+              return `<label class="${cls}">${esc(f.label)}<span class="select-wrap"><select name="${f.name}" class="field">${opts2}</select></span></label>`;
             }
             if (f.money) {
-              return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="text" inputmode="numeric" value="${esc(miles(f.value))}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
+              return `<label class="${cls}">${esc(f.label)}<input name="${f.name}" class="field" type="text" inputmode="numeric" value="${esc(miles(f.value))}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
             }
-            return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min ? `min="${f.min}"` : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
+            return `<label class="${cls}">${esc(f.label)}<input name="${f.name}" class="field" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min ? `min="${f.min}"` : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
           }).join('');
           const root = mountModal(`
             <div class="modal-head"><h3>${esc(opts.title)}</h3>${opts.subtitle ? `<p class="modal-sub">${esc(opts.subtitle)}</p>` : ''}</div>
@@ -331,7 +344,7 @@ import { API_URL } from '../scripts/admin-config';
           });
           // Hook opcional para lógica reactiva entre campos (p.ej. autollenar el precio).
           if (opts.onReady) opts.onReady(root.querySelector('#modal-form'));
-          setTimeout(() => root.querySelector('.field')?.focus(), 30);
+          // Sin auto-focus: el modal abre sin ningún campo seleccionado.
         });
       }
 
@@ -598,7 +611,7 @@ import { API_URL } from '../scripts/admin-config';
         });
 
         pintarLista();
-        setTimeout(() => root.querySelector('#v-cliente')?.focus(), 30);
+        // Sin auto-focus: el modal abre sin ningún campo seleccionado.
       }
 
       $('#btn-add-venta').addEventListener('click', abrirModalVenta);
@@ -655,8 +668,8 @@ import { API_URL } from '../scripts/admin-config';
           const v = await modalForm({
             title: 'Editar producto', subtitle: ref, confirm: 'Guardar',
             fields: [
-              { name: 'precio', label: 'Precio tienda (público)', money: true, value: p.precio },
-              { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, value: realDe(p) },
+              { name: 'precio', label: 'Precio tienda (público)', money: true, value: p.precio, half: true },
+              { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, value: realDe(p), half: true },
               { name: 'imagen', label: 'Imagen (URL)', type: 'text', value: p.imagen },
             ],
           });
@@ -694,16 +707,16 @@ import { API_URL } from '../scripts/admin-config';
         const o = await modalForm({
           title: 'Nuevo producto', confirm: 'Crear producto',
           fields: [
-            { name: 'producto', label: 'Producto', combo: () => valoresProducto('producto'), placeholder: 'Boxer' },
-            { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Nike' },
-            { name: 'color', label: 'Color', combo: () => valoresProducto('color'), placeholder: 'Negro' },
-            { name: 'talla', label: 'Talla', combo: () => valoresProducto('talla'), placeholder: 'XL' },
-            { name: 'precio', label: 'Precio tienda (público)', money: true, placeholder: '30.000' },
-            { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, placeholder: '25.000' },
+            { name: 'producto', label: 'Producto', combo: () => valoresProducto('producto'), placeholder: 'Boxer', half: true },
+            { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Nike', half: true },
+            { name: 'color', label: 'Color', combo: () => valoresProducto('color'), placeholder: 'Negro', half: true },
+            { name: 'talla', label: 'Talla', combo: () => valoresProducto('talla'), placeholder: 'XL', half: true },
+            { name: 'precio', label: 'Precio tienda (público)', money: true, placeholder: '30.000', half: true },
+            { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, placeholder: '25.000', half: true },
             { name: 'stock_inicial', label: 'Stock inicial', type: 'number', placeholder: '10' },
             { name: 'imagen', label: 'Imagen (URL)', placeholder: 'https://…' },
           ],
-          // Autollenar ambos precios cuando el producto ya existe; si el usuario los edita, no los pisamos.
+          // Autollenar precios + aviso en vivo (crea nuevo vs suma stock a uno existente).
           onReady: (form) => {
             const prodInput = form.querySelector('[name="producto"]');
             const autoFields = [
@@ -719,22 +732,69 @@ import { API_URL } from '../scripts/admin-config';
               const v = f.get(prodInput.value);
               f.input.value = v ? miles(v) : '';
             });
-            prodInput.addEventListener('input', sync);
-            prodInput.addEventListener('change', sync);
+
+            // Aviso en vivo: al llenar los 4 campos clave, dice si se crea uno nuevo
+            // o si se le sumará stock a uno que ya existe (y cambia el texto del botón).
+            const banner = document.createElement('div');
+            banner.className = 'nuevo-estado';
+            banner.hidden = true;
+            form.prepend(banner);
+            const btn = form.parentNode.querySelector('.modal-foot .btn-primary');
+            const claveInputs = ['producto', 'marca', 'color', 'talla'].map((n) => form.querySelector(`[name="${n}"]`));
+            // Campos que solo aplican al CREAR uno nuevo (al sumar stock, el producto ya los tiene).
+            const soloNuevo = ['precio', 'precio_real', 'imagen'].map((n) => form.querySelector(`[name="${n}"]`).closest('.mfield'));
+            const stockLabel = form.querySelector('[name="stock_inicial"]').closest('.mfield');
+            const stockTexto = stockLabel.childNodes[0];   // el nodo de texto de la etiqueta
+            function mostrarSoloNuevo(ver) {
+              soloNuevo.forEach((c) => { c.hidden = !ver; });
+              stockTexto.textContent = ver ? 'Stock inicial' : 'Unidades que llegaron';
+            }
+            function actualizarEstado() {
+              const vals = claveInputs.map((i) => i.value.trim());
+              if (vals.some((v) => !v)) {   // faltan datos → sin veredicto todavía
+                banner.hidden = true;
+                btn.textContent = 'Crear producto';
+                mostrarSoloNuevo(true);
+                return;
+              }
+              const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === vals.join('|').toLowerCase());
+              banner.hidden = false;
+              if (existente) {
+                banner.className = 'nuevo-estado existe';
+                banner.innerHTML = `<i class="bi bi-arrow-repeat"></i><span>Ya existe: <b>${esc(existente.marca)} · ${esc(existente.color)} · ${esc(existente.talla)}</b> — stock actual <b>${existente.stock}</b>. Se le sumará lo que pongas abajo.</span>`;
+                btn.textContent = 'Agregar stock';
+                mostrarSoloNuevo(false);   // precios e imagen no aplican al sumar stock
+              } else {
+                banner.className = 'nuevo-estado nuevo';
+                banner.innerHTML = `<i class="bi bi-stars"></i><span>Producto <b>nuevo</b> — se creará.</span>`;
+                btn.textContent = 'Crear producto';
+                mostrarSoloNuevo(true);
+              }
+            }
+
+            claveInputs.forEach((i) => {
+              i.addEventListener('input', () => { sync(); actualizarEstado(); });
+              i.addEventListener('change', () => { sync(); actualizarEstado(); });
+            });
+            actualizarEstado();
           },
         });
         if (!o) return;
-        if (!o.producto || !o.marca || !o.color || !o.talla || !o.precio || !o.precio_real) {
-          pill('Completa producto, marca, color, talla y ambos precios', 'err');
+        if (!o.producto || !o.marca || !o.color || !o.talla) {
+          pill('Completa producto, marca, color y talla', 'err');
           return;
         }
         // ¿Ya existe esta combinación producto/marca/color/talla? (sin distinguir mayúsculas)
         const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === keyOf(o).toLowerCase());
         const cant = parseInt(o.stock_inicial, 10) || 0;
         if (existente) {
-          // Ya existe → solo sumamos el stock indicado, no creamos fila nueva.
+          // Ya existe → solo sumamos el stock indicado, no creamos fila nueva (los precios no aplican).
           await submit({ action: 'add_stock', producto: existente.producto, marca: existente.marca, color: existente.color, talla: existente.talla, cantidad: cant }, `Ya existía — +${cant} al stock ✓`);
         } else {
+          if (!o.precio || !o.precio_real) {
+            pill('Completa el precio tienda y el precio real', 'err');
+            return;
+          }
           await submit({ action: 'add_product', ...o }, 'Producto creado ✓');
         }
       }
@@ -886,6 +946,46 @@ import { API_URL } from '../scripts/admin-config';
       })();
     </script>
 
+    <!-- ── PWA: registro del service worker + botón de instalación ── -->
+    <script is:inline>
+      (() => {
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/panel-sw.js').catch((e) => console.warn('[MacV] SW no registrado', e));
+          });
+        }
+
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const botones = () => ['install-btn', 'btn-install'].map((id) => document.getElementById(id)).filter(Boolean);
+        const mostrar = () => botones().forEach((b) => (b.hidden = false));
+        const ocultar = () => botones().forEach((b) => (b.hidden = true));
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();          // no mostrar el mini-banner automático de Chrome
+          deferredPrompt = e;
+          if (!isStandalone) mostrar();
+        });
+
+        async function instalar() {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          if (outcome === 'accepted') ocultar();
+        }
+        botones().forEach((b) => b.addEventListener('click', instalar));
+        window.addEventListener('appinstalled', ocultar);
+
+        // iOS Safari no dispara beforeinstallprompt → mostramos la pista manual.
+        const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        if (esIOS && !isStandalone) {
+          const hint = document.getElementById('ios-install-hint');
+          if (hint) hint.hidden = false;
+        }
+      })();
+    </script>
+
     <style is:global>
       *, *::before, *::after { box-sizing: border-box; }
       /* Anulamos el flex-center de global.css (pensado para el sitio, no el panel):
@@ -965,6 +1065,19 @@ import { API_URL } from '../scripts/admin-config';
         font-size: .82rem; text-decoration: none; transition: var(--transition);
       }
       .login-back i { font-size: 1.15rem; }
+      .login-install {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 16px; margin-top: var(--space-1);
+        font-family: var(--font-body); font-weight: 600; font-size: .82rem;
+        background: transparent; color: var(--fg); cursor: pointer;
+        border: 1px solid var(--carbon-900); transition: var(--transition);
+      }
+      .login-install i { font-size: 1rem; }
+      .login-ios-hint {
+        display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 3px;
+        margin: 0; font-size: .74rem; line-height: 1.4; color: var(--fg-muted);
+      }
+      .login-ios-hint i { font-size: .9rem; }
 
       /* ── LAYOUT (móvil-first: sidebar = barra superior; desktop = columna lateral) ── */
       .app { min-height: 100vh; }
@@ -1245,6 +1358,12 @@ import { API_URL } from '../scripts/admin-config';
       .modal-body { padding: 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
       .modal-msg { margin: 0; font-size: .92rem; line-height: 1.5; }
       .mfield { display: flex; flex-direction: column; gap: 6px; font-size: .8rem; font-weight: 600; color: var(--fg-muted); }
+      /* Modal de formulario en grid de 2 columnas: los campos con .half ocupan media fila. */
+      #modal-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-3); }
+      #modal-form .mfield { grid-column: span 2; }        /* fila completa por defecto */
+      #modal-form .mfield.half { grid-column: span 1; }   /* media fila */
+      #modal-form .mfield[hidden] { display: none; }
+      #modal-form .nuevo-estado { grid-column: span 2; }  /* el aviso siempre a lo ancho */
       .modal-foot { display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-5); }
       .btn-ghost {
         font-family: var(--font-body); font-weight: 600; font-size: .92rem;
@@ -1269,12 +1388,18 @@ import { API_URL } from '../scripts/admin-config';
       .vitem-nota { display: flex; align-items: center; gap: 6px; margin: var(--space-2) 0 0; font-size: .8rem; color: var(--fg-muted); }
       .vitem-nota i { color: var(--blood-600); }
       .vitem-nota b { color: var(--fg); }
+      /* Aviso en vivo del modal Nuevo producto: crea nuevo vs suma stock a existente */
+      .nuevo-estado { display: flex; align-items: flex-start; gap: 8px; margin-bottom: var(--space-3); padding: 10px 12px; font-size: .82rem; line-height: 1.35; color: var(--fg); border: 1px solid var(--border-strong); }
+      .nuevo-estado i { flex-shrink: 0; font-size: 1.05rem; color: var(--blood-600); }
+      .nuevo-estado b { color: var(--fg); }
+      .nuevo-estado.nuevo { background: var(--bone-100); }
+      .nuevo-estado.existe { border-color: var(--blood-600); background: color-mix(in srgb, var(--blood-600) 8%, transparent); }
       .wide-search { max-width: none; margin-bottom: var(--space-4); }
 
       /* ── PILL ── */
       .pill {
         position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
-        padding: .6rem 1.3rem; border-radius: 999px; color: #fff; font-weight: 600; font-size: .88rem;
+        padding: .6rem 1.3rem; border-radius: 0; color: #fff; font-weight: 600; font-size: .88rem;
         opacity: 0; pointer-events: none; transition: all .3s ease; z-index: 200;
       }
       .pill.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1293,6 +1418,7 @@ import { API_URL } from '../scripts/admin-config';
         .combo-opt:hover { background: var(--bone-200); }
         .login-eye:hover { color: var(--fg); }
         .login-back:hover { color: var(--fg); }
+        .login-install:hover { background: var(--carbon-900); color: var(--bone-50); }
       }
 
       @media (min-width: 750px) {
