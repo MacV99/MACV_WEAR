@@ -123,6 +123,14 @@ import { API_URL } from '../scripts/admin-config';
 
       const $ = (s, r = document) => r.querySelector(s);
       const fmt = (n) => '$ ' + (Number(n) || 0).toLocaleString('es-CO');
+      // Formatea solo dígitos con puntos de miles ("30000" → "30.000"). Vacío si no hay dígitos.
+      const miles = (d) => { d = String(d ?? '').replace(/\D/g, ''); return d ? Number(d).toLocaleString('es-CO') : ''; };
+      // Convierte un input en campo de dinero: reformatea con puntos mientras se escribe.
+      function attachMoney(input) {
+        const reformat = () => { input.value = miles(input.value); };
+        input.addEventListener('input', reformat);
+        reformat();
+      }
       const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const keyOf = (p) => `${p.producto}|${p.marca}|${p.color}|${p.talla}`;
       // Estado de pago de una venta: solo 'pendiente' explícito cuenta; vacío/histórico = 'pagado'.
@@ -293,6 +301,9 @@ import { API_URL } from '../scripts/admin-config';
               const opts2 = f.options.map((o) => `<option value="${esc(o)}" ${o === f.value ? 'selected' : ''}>${esc(o)}</option>`).join('');
               return `<label class="mfield">${esc(f.label)}<span class="select-wrap"><select name="${f.name}" class="field">${opts2}</select></span></label>`;
             }
+            if (f.money) {
+              return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="text" inputmode="numeric" value="${esc(miles(f.value))}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
+            }
             return `<label class="mfield">${esc(f.label)}<input name="${f.name}" class="field" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min ? `min="${f.min}"` : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} /></label>`;
           }).join('');
           const root = mountModal(`
@@ -309,12 +320,17 @@ import { API_URL } from '../scripts/admin-config';
             e.preventDefault();
             const out = {};
             new FormData(e.target).forEach((v, k) => out[k] = v);
+            // Campos de dinero: mandamos solo los dígitos, sin puntos ("30.000" → "30000").
+            opts.fields.forEach((f) => { if (f.money && out[f.name] != null) out[f.name] = String(out[f.name]).replace(/\D/g, ''); });
             done(out);
           });
-          // Campos con combobox creable (f.combo = () => array de opciones).
+          // Campos con combobox creable (f.combo = () => array de opciones) o de dinero.
           opts.fields.forEach((f) => {
             if (f.combo) { const i = root.querySelector(`[name="${f.name}"]`); if (i) makeCombobox(i, f.combo); }
+            if (f.money) { const i = root.querySelector(`[name="${f.name}"]`); if (i) attachMoney(i); }
           });
+          // Hook opcional para lógica reactiva entre campos (p.ej. autollenar el precio).
+          if (opts.onReady) opts.onReady(root.querySelector('#modal-form'));
           setTimeout(() => root.querySelector('.field')?.focus(), 30);
         });
       }
@@ -440,7 +456,10 @@ import { API_URL } from '../scripts/admin-config';
 
       // ─── AGREGAR VENTA (modal con varios productos) ───────────────────────────
       // Precio real por unidad (lo que de verdad cobras). La tienda muestra otro.
+      // Ahora es por producto (columna precio_real); 25.000 es solo el respaldo
+      // para productos viejos que aún no tengan ese valor guardado.
       const PRECIO_REAL = 25000;
+      const realDe = (p) => Number(p.precio_real) || PRECIO_REAL;
 
       function abrirModalVenta() {
         let items = [];   // { key, marca, color, talla, cantidad, stock }
@@ -464,7 +483,8 @@ import { API_URL } from '../scripts/admin-config';
               </div>
             </div>
             <div id="v-list" class="vitem-list"></div>
-            <div class="vitem-total"><span>Total</span><strong id="v-total">$ 0</strong></div>
+            <div class="vitem-total"><span>Cobrar al cliente</span><strong id="v-total">$ 0</strong></div>
+            <p id="v-nota" class="vitem-nota" hidden></p>
           </div>
           <div class="modal-foot">
             <button class="btn-ghost" type="button" data-x>Cancelar</button>
@@ -475,6 +495,7 @@ import { API_URL } from '../scripts/admin-config';
         const sel = root.querySelector('#v-prod');
         const listEl = root.querySelector('#v-list');
         const totalEl = root.querySelector('#v-total');
+        const notaEl = root.querySelector('#v-nota');
 
         // Cliente: combobox creable sobre los clientes de ventas anteriores.
         makeCombobox(root.querySelector('#v-cliente'), clientesList);
@@ -503,6 +524,11 @@ import { API_URL } from '../scripts/admin-config';
         }
 
         function pintarLista() {
+          // Regla: si la venta es de 1 sola unidad en total → precio tienda (cliente paga más).
+          // 2 o más unidades (aunque sean productos distintos) → precio real (descuento).
+          const totalUnidades = items.reduce((a, it) => a + it.cantidad, 0);
+          const unica = totalUnidades === 1;
+          const cobroUnit = (it) => unica ? it.precioTienda : it.precio;
           listEl.innerHTML = items.map((it, i) => `
             <div class="vitem">
               <span class="vitem-name">${esc(it.marca)} · ${esc(it.color)} · ${esc(it.talla)}</span>
@@ -511,11 +537,19 @@ import { API_URL } from '../scripts/admin-config';
                 <span>${it.cantidad}</span>
                 <button type="button" data-act="inc" data-i="${i}">+</button>
               </div>
-              <span class="vitem-sub">${fmt(it.cantidad * PRECIO_REAL)}</span>
+              <span class="vitem-sub">${fmt(it.cantidad * cobroUnit(it))}</span>
               <button type="button" class="vitem-del" data-act="del" data-i="${i}"><i class="bi bi-x-lg"></i></button>
             </div>`).join('');
-          const tot = items.reduce((a, it) => a + it.cantidad, 0) * PRECIO_REAL;
-          totalEl.textContent = fmt(tot);
+          const totalCobrar = items.reduce((a, it) => a + it.cantidad * cobroUnit(it), 0);
+          const totalReal   = items.reduce((a, it) => a + it.cantidad * it.precio, 0);
+          totalEl.textContent = fmt(totalCobrar);
+          // En ventas de 1 unidad muestra tu ganancia contada (real) y el extra que te llevas.
+          if (totalCobrar !== totalReal) {
+            notaEl.hidden = false;
+            notaEl.innerHTML = `<i class="bi bi-info-circle-fill"></i> Se registra tu ganancia: <b>${fmt(totalReal)}</b> · extra para ti ${fmt(totalCobrar - totalReal)}`;
+          } else {
+            notaEl.hidden = true;
+          }
           pintarSelect();
         }
 
@@ -527,7 +561,7 @@ import { API_URL } from '../scripts/admin-config';
           if (libre <= 0) { pill('Sin stock', 'err'); return; }
           const ex = items.find((it) => it.key === key);
           if (ex) ex.cantidad++;
-          else items.push({ key, marca: p.marca, color: p.color, talla: p.talla, producto: p.producto, cantidad: 1 });
+          else items.push({ key, marca: p.marca, color: p.color, talla: p.talla, producto: p.producto, cantidad: 1, precio: realDe(p), precioTienda: Number(p.precio) || realDe(p) });
           pintarLista();
         });
 
@@ -552,7 +586,7 @@ import { API_URL } from '../scripts/admin-config';
           btn.disabled = true; btn.textContent = 'Guardando…';
           const payloadItems = items.map((it) => ({
             producto: it.producto, marca: it.marca, color: it.color, talla: it.talla,
-            cantidad: it.cantidad, precio: PRECIO_REAL,
+            cantidad: it.cantidad, precio: it.precio,
           }));
           const ok = await submit({
             action: 'sale', items: payloadItems,
@@ -621,7 +655,8 @@ import { API_URL } from '../scripts/admin-config';
           const v = await modalForm({
             title: 'Editar producto', subtitle: ref, confirm: 'Guardar',
             fields: [
-              { name: 'precio', label: 'Precio tienda', type: 'number', value: p.precio },
+              { name: 'precio', label: 'Precio tienda (público)', money: true, value: p.precio },
+              { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, value: realDe(p) },
               { name: 'imagen', label: 'Imagen (URL)', type: 'text', value: p.imagen },
             ],
           });
@@ -639,6 +674,22 @@ import { API_URL } from '../scripts/admin-config';
       // ─── NUEVO PRODUCTO (modal desde Inventario) ─────────────────────────────
       // Cada campo de texto es un combobox creable que reutiliza los valores ya
       // existentes del inventario (marcas, colores, tallas, categorías…).
+      // Precio tienda ya conocido para un tipo de producto (ej: todos los "Boxer" a 30.000).
+      // Devuelve el precio del primer producto existente con ese nombre, o '' si es nuevo.
+      function precioDeProducto(nombre) {
+        const n = String(nombre || '').trim().toLowerCase();
+        if (!n) return '';
+        const match = DATA.productos.find((p) => String(p.producto).trim().toLowerCase() === n && p.precio);
+        return match ? match.precio : '';
+      }
+      // Precio real conocido para un tipo de producto (usa el respaldo 25.000 si aún no está guardado).
+      function precioRealDeProducto(nombre) {
+        const n = String(nombre || '').trim().toLowerCase();
+        if (!n) return '';
+        const match = DATA.productos.find((p) => String(p.producto).trim().toLowerCase() === n);
+        return match ? realDe(match) : '';
+      }
+
       async function abrirModalNuevo() {
         const o = await modalForm({
           title: 'Nuevo producto', confirm: 'Crear producto',
@@ -647,15 +698,34 @@ import { API_URL } from '../scripts/admin-config';
             { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Nike' },
             { name: 'color', label: 'Color', combo: () => valoresProducto('color'), placeholder: 'Negro' },
             { name: 'talla', label: 'Talla', combo: () => valoresProducto('talla'), placeholder: 'XL' },
-            { name: 'precio', label: 'Precio tienda', type: 'number', placeholder: '30000' },
+            { name: 'precio', label: 'Precio tienda (público)', money: true, placeholder: '30.000' },
+            { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, placeholder: '25.000' },
             { name: 'stock_inicial', label: 'Stock inicial', type: 'number', placeholder: '10' },
-            { name: 'categoria', label: 'Categoría', combo: () => valoresProducto('categoria'), placeholder: 'Ropa interior' },
             { name: 'imagen', label: 'Imagen (URL)', placeholder: 'https://…' },
           ],
+          // Autollenar ambos precios cuando el producto ya existe; si el usuario los edita, no los pisamos.
+          onReady: (form) => {
+            const prodInput = form.querySelector('[name="producto"]');
+            const autoFields = [
+              { input: form.querySelector('[name="precio"]'), get: precioDeProducto },
+              { input: form.querySelector('[name="precio_real"]'), get: precioRealDeProducto },
+            ];
+            autoFields.forEach((f) => {
+              f.auto = !f.input.value;   // dejamos de autollenar en cuanto el usuario lo toca a mano
+              f.input.addEventListener('input', () => { f.auto = false; });
+            });
+            const sync = () => autoFields.forEach((f) => {
+              if (!f.auto) return;
+              const v = f.get(prodInput.value);
+              f.input.value = v ? miles(v) : '';
+            });
+            prodInput.addEventListener('input', sync);
+            prodInput.addEventListener('change', sync);
+          },
         });
         if (!o) return;
-        if (!o.producto || !o.marca || !o.color || !o.talla || !o.precio) {
-          pill('Completa producto, marca, color, talla y precio', 'err');
+        if (!o.producto || !o.marca || !o.color || !o.talla || !o.precio || !o.precio_real) {
+          pill('Completa producto, marca, color, talla y ambos precios', 'err');
           return;
         }
         // ¿Ya existe esta combinación producto/marca/color/talla? (sin distinguir mayúsculas)
@@ -1196,6 +1266,9 @@ import { API_URL } from '../scripts/admin-config';
       .qty button { width: 26px; height: 26px; border: 1px solid var(--border-strong); background: var(--bone-50); cursor: pointer; font-size: 1rem; }
       .vitem-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: var(--space-2); border-top: 1px solid var(--border-strong); font-size: .9rem; }
       .vitem-total strong { font-family: var(--font-display); font-size: 1.4rem; }
+      .vitem-nota { display: flex; align-items: center; gap: 6px; margin: var(--space-2) 0 0; font-size: .8rem; color: var(--fg-muted); }
+      .vitem-nota i { color: var(--blood-600); }
+      .vitem-nota b { color: var(--fg); }
       .wide-search { max-width: none; margin-bottom: var(--space-4); }
 
       /* ── PILL ── */

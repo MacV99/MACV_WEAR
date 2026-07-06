@@ -21,7 +21,7 @@ var ADMIN_PASSWORD = 'macv2024';            // CÁMBIALA — clave del dashboard
 
 // Columnas que deben existir en la hoja de productos (se crean si faltan).
 var REQUIRED_COLS = [
-  'producto', 'marca', 'color', 'talla', 'precio', 'stock', 'imagen',
+  'producto', 'marca', 'color', 'talla', 'precio', 'precio_real', 'stock', 'imagen',
   'stock_base', 'vendidos', 'agregados', 'costo', 'categoria'
 ];
 
@@ -146,6 +146,7 @@ function readAll() {
       color:      String(row[p.col['color']] || ''),
       talla:      String(row[p.col['talla']] || ''),
       precio:     toNum(row[p.col['precio']]),
+      precio_real: toNum(row[p.col['precio_real']]),
       stock:      toNum(row[p.col['stock']]),
       imagen:     String(row[p.col['imagen']] || ''),
       stock_base: toNum(row[p.col['stock_base']]),
@@ -279,6 +280,7 @@ function addProduct(body) {
   rowArr[p.col['color']]      = body.color || '';
   rowArr[p.col['talla']]      = body.talla || '';
   rowArr[p.col['precio']]     = toNum(body.precio);
+  rowArr[p.col['precio_real']] = toNum(body.precio_real);
   rowArr[p.col['costo']]      = toNum(body.costo);
   rowArr[p.col['imagen']]     = body.imagen || '';
   rowArr[p.col['categoria']]  = body.categoria || '';
@@ -295,8 +297,9 @@ function updateProduct(body) {
   var r = findRow(p, body.key || body);
   if (r === -1) return { ok: false, error: 'Producto no encontrado' };
   var f = body.fields || {};
-  if (f.precio    !== undefined) setCell(p, r, 'precio', toNum(f.precio));
-  if (f.costo     !== undefined) setCell(p, r, 'costo', toNum(f.costo));
+  if (f.precio      !== undefined) setCell(p, r, 'precio', toNum(f.precio));
+  if (f.precio_real !== undefined) setCell(p, r, 'precio_real', toNum(f.precio_real));
+  if (f.costo       !== undefined) setCell(p, r, 'costo', toNum(f.costo));
   if (f.imagen    !== undefined) setCell(p, r, 'imagen', f.imagen);
   if (f.categoria !== undefined) setCell(p, r, 'categoria', f.categoria);
   if (f.color     !== undefined) setCell(p, r, 'color', f.color);
