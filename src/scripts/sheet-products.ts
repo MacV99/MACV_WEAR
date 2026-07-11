@@ -25,20 +25,59 @@ export interface GroupedProduct {
   skus: SheetProduct[];
 }
 
+// Mapa color → hex. Las claves compuestas (ej. 'azul navi') van más específicas;
+// getHex primero intenta match exacto y luego por palabra, así "Azul Navi" o
+// "Gris Jaspe" caen en su tono real y no en el genérico.
 const COLOR_HEX: Record<string, string> = {
-  negro:  '#2A2620',
-  hueso:  '#D9CFB9',
-  oliva:  '#5A5A2E',
-  gris:   '#9B9590',
-  rojo:   '#B0291F',
-  sangre: '#B0291F',
-  azul:   '#1B3A6B',
-  blanco: '#EBE3D2',
-  beige:  '#B8AC92',
+  negro:          '#1E1B18',
+  blanco:         '#EBE3D2',
+  hueso:          '#D9CFB9',
+  crema:          '#EDE4CF',
+  beige:          '#B8AC92',
+  gris:           '#9B9590',
+  'gris jaspe':   '#B3ADA6',
+  plateado:       '#C2C2C2',
+  azul:           '#1B3A6B',
+  'azul navi':    '#1F2A44',
+  'azul rey':     '#1E3A8A',
+  'azul cielo':   '#7FB2E5',
+  celeste:        '#7FB2E5',
+  turquesa:       '#2CA5A5',
+  rojo:           '#B0291F',
+  sangre:         '#B0291F',
+  vinotinto:      '#5E1B23',
+  vino:           '#5E1B23',
+  rosa:           '#E8A0BF',
+  rosado:         '#E8A0BF',
+  fucsia:         '#C2185B',
+  morado:         '#6B3FA0',
+  lila:           '#B57EDC',
+  verde:          '#3B6B45',
+  'verde militar':'#4B5320',
+  militar:        '#4B5320',
+  oliva:          '#5A5A2E',
+  amarillo:       '#E7C24B',
+  dorado:         '#C9A227',
+  naranja:        '#D2691E',
+  cafe:           '#6B4A2B',
+  marron:         '#6B4A2B',
 };
 
+// Normaliza: minúsculas, sin acentos, sin espacios extra.
+function normColor(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
 export function getHex(color: string): string {
-  return COLOR_HEX[color.toLowerCase()] ?? '#6B655C';
+  const c = normColor(color);
+  if (COLOR_HEX[c]) return COLOR_HEX[c];
+  // Match por palabra: busca una clave conocida dentro del nombre compuesto
+  // (ej. "azul navi" → azul). Prioriza las claves más largas (más específicas).
+  const keys = Object.keys(COLOR_HEX).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    if (c.includes(k)) return COLOR_HEX[k];
+  }
+  return '#6B655C';
 }
 
 function toSlug(str: string): string {

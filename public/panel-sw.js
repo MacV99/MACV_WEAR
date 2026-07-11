@@ -50,6 +50,9 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(req, copy));
         return res;
       })
-      .catch(() => caches.match(req).then((m) => m || caches.match('/admin')))
+      // Sin red: sirve lo cacheado. Solo una navegación cae al shell '/admin'
+      // (cubre '/admin/' con barra, que no es clave propia); para un asset no
+      // devolvemos el HTML del shell — sería el tipo de contenido equivocado.
+      .catch(() => caches.match(req).then((m) => m || (req.mode === 'navigate' ? caches.match('/admin') : undefined)))
   );
 });

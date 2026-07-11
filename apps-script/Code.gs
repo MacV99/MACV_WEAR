@@ -21,13 +21,14 @@ var ADMIN_PASSWORD = 'macv2024';            // CÁMBIALA — clave del dashboard
 
 // Columnas que deben existir en la hoja de productos (se crean si faltan).
 var REQUIRED_COLS = [
-  'producto', 'marca', 'color', 'talla', 'precio', 'precio_real', 'stock', 'imagen',
+  'producto', 'marca', 'color', 'talla', 'referencia', 'precio', 'precio_real', 'stock', 'imagen',
   'stock_base', 'vendidos', 'agregados', 'costo', 'categoria'
 ];
 
+// `referencia` va al final para no correr las columnas de las ventas ya registradas.
 var VENTA_COLS = [
   'id', 'fecha', 'producto', 'marca', 'color', 'talla',
-  'cantidad', 'precio_unit', 'total', 'costo_unit', 'ganancia', 'metodo_pago', 'cliente', 'estado'
+  'cantidad', 'precio_unit', 'total', 'costo_unit', 'ganancia', 'metodo_pago', 'cliente', 'estado', 'referencia'
 ];
 
 // ─── Entradas HTTP ──────────────────────────────────────────────────────────
@@ -145,6 +146,7 @@ function readAll() {
       marca:      String(row[p.col['marca']] || ''),
       color:      String(row[p.col['color']] || ''),
       talla:      String(row[p.col['talla']] || ''),
+      referencia: String(row[p.col['referencia']] || ''),
       precio:     toNum(row[p.col['precio']]),
       precio_real: toNum(row[p.col['precio_real']]),
       stock:      toNum(row[p.col['stock']]),
@@ -177,7 +179,8 @@ function readAll() {
       metodo_pago: String(vv[i][11] || ''),
       cliente:     String(vv[i][12] || ''),
       // Vacío (ventas históricas) se trata como 'pagado'.
-      estado:      String(vv[i][13] || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado'
+      estado:      String(vv[i][13] || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado',
+      referencia:  String(vv[i][14] || '')
     });
   }
 
@@ -186,7 +189,9 @@ function readAll() {
 
 // ─── Mutaciones ────────────────────────────────────────────────────────────────
 
-// Encuentra fila por clave compuesta producto+marca+color+talla. Devuelve idx en values o -1.
+// Encuentra fila por clave compuesta producto+marca+color+talla.
+// La referencia ya no es una columna aparte: va dentro de `marca`
+// (ej. "Calvin Klein ref3"), así distingue SKUs sin campo extra.
 function findRow(p, key) {
   for (var r = 1; r < p.values.length; r++) {
     var row = p.values[r];
@@ -250,7 +255,8 @@ function registerSale(body) {
       id, new Date(),
       p.values[r][p.col['producto']], p.values[r][p.col['marca']],
       p.values[r][p.col['color']], p.values[r][p.col['talla']],
-      cant, precio, total, costo, gan, metodo, cliente, estado
+      cant, precio, total, costo, gan, metodo, cliente, estado,
+      p.values[r][p.col['referencia']]
     ]);
     registradas.push(id);
   }
@@ -268,10 +274,43 @@ function addStock(body) {
   return { ok: true, stock: stock, data: readAll() };
 }
 
+// Imagen compartida por marca+color: todas las tallas del mismo producto usan la
+// misma imagen (misma lógica que la Tienda). La ref va dentro de `marca`, así que
+// marca+color ya identifica el producto. Devuelve la imagen del grupo y la propaga:
+//  - `nueva` vacía  → hereda la que ya tenga cualquier talla del grupo.
+//  - `nueva` con valor → unifica: se la copia a las tallas del grupo que difieran.
+// `excluir` = idx de fila a saltar (la que se está creando/editando), o -1.
+function imagenGrupo(p, marca, color, nueva, excluir) {
+  nueva = String(nueva == null ? '' : nueva).trim();
+  var rows = [];
+  var existente = '';
+  for (var i = 1; i < p.values.length; i++) {
+    if (i === excluir) continue;
+    var row = p.values[i];
+    if (eq(row[p.col['marca']], marca) &&
+        eq(row[p.col['color']], color)) {
+      rows.push(i);
+      if (!existente) {
+        var img = String(row[p.col['imagen']] || '').trim();
+        if (img) existente = img;
+      }
+    }
+  }
+  var img = nueva || existente;
+  if (img) {
+    for (var j = 0; j < rows.length; j++) {
+      if (String(p.values[rows[j]][p.col['imagen']] || '').trim() !== img) {
+        setCell(p, rows[j], 'imagen', img);
+      }
+    }
+  }
+  return img;
+}
+
 function addProduct(body) {
   var p = loadProducts();
   if (findRow(p, body) !== -1) {
-    return { ok: false, error: 'Ya existe esa combinación marca/color/talla' };
+    return { ok: false, error: 'Ya existe esa combinación producto/marca/color/talla' };
   }
   var stockInicial = toNum(body.stock_inicial);
   var rowArr = new Array(p.headers.length).fill('');
@@ -282,7 +321,8 @@ function addProduct(body) {
   rowArr[p.col['precio']]     = toNum(body.precio);
   rowArr[p.col['precio_real']] = toNum(body.precio_real);
   rowArr[p.col['costo']]      = toNum(body.costo);
-  rowArr[p.col['imagen']]     = body.imagen || '';
+  // La imagen se comparte entre todas las tallas de la misma marca+color.
+  rowArr[p.col['imagen']]     = imagenGrupo(p, body.marca, body.color, body.imagen, -1);
   rowArr[p.col['categoria']]  = body.categoria || '';
   rowArr[p.col['stock_base']] = stockInicial;
   rowArr[p.col['vendidos']]   = 0;
@@ -308,6 +348,13 @@ function updateProduct(body) {
   if (f.producto  !== undefined) setCell(p, r, 'producto', f.producto);
   // Override directo de stock_base (corrección manual de inventario).
   if (f.stock_base !== undefined) { setCell(p, r, 'stock_base', toNum(f.stock_base)); recompute(p, r); }
+  // Cambiar la imagen (o mover el SKU de grupo) unifica la imagen en todas las
+  // tallas de la misma marca+color — igual que al crear.
+  if (f.imagen !== undefined || f.marca !== undefined || f.color !== undefined) {
+    imagenGrupo(p,
+      p.values[r][p.col['marca']], p.values[r][p.col['color']],
+      p.values[r][p.col['imagen']], r);
+  }
   return { ok: true, data: readAll() };
 }
 
@@ -322,7 +369,8 @@ function deleteProduct(body) {
 // ─── Editar / eliminar ventas ──────────────────────────────────────────────────
 // Al editar la cantidad o eliminar, se ajusta `vendidos` del producto (devuelve stock).
 // Columnas Ventas: 0 id,1 fecha,2 producto,3 marca,4 color,5 talla,6 cantidad,
-//                  7 precio_unit,8 total,9 costo_unit,10 ganancia,11 metodo_pago,12 cliente
+//                  7 precio_unit,8 total,9 costo_unit,10 ganancia,11 metodo_pago,
+//                  12 cliente,13 estado,14 referencia
 
 function findVentaRow(vs, id) {
   var v = vs.getDataRange().getValues();
@@ -420,6 +468,46 @@ function aplicarCosto() {
   }
 
   Logger.log('Costo $' + COSTO_UNIDAD + ' aplicado a productos y ' + (v.length - 1) + ' ventas recalculadas.');
+}
+
+// ─── Migración one-shot: fold `referencia` dentro de `marca` ───────────────────
+// Correr UNA vez desde el editor (selecciona "migrarReferencias" arriba y pulsa ▶).
+// Junta "Calvin Klein" + "ref3" → "Calvin Klein ref3" en Inventario y Ventas, y
+// vacía la columna referencia. Idempotente: si ya está incluida, no la duplica.
+function migrarReferencias() {
+  var movidos = 0;
+
+  // 1. Inventario
+  var p = loadProducts();
+  for (var r = 1; r < p.values.length; r++) {
+    var ref = String(p.values[r][p.col['referencia']] || '').trim();
+    if (!ref) continue;
+    var marca = String(p.values[r][p.col['marca']] || '').trim();
+    if (marca.toLowerCase().indexOf(ref.toLowerCase()) === -1) {
+      setCell(p, r, 'marca', (marca + ' ' + ref).trim());
+    }
+    setCell(p, r, 'referencia', '');
+    movidos++;
+  }
+
+  // 2. Ventas (misma lógica, columnas por índice de VENTA_COLS)
+  var vs = ventasSheet();
+  var vv = vs.getDataRange().getValues();
+  var marCol = VENTA_COLS.indexOf('marca');        // 3
+  var refCol = VENTA_COLS.indexOf('referencia');   // 14
+  for (var i = 1; i < vv.length; i++) {
+    var vref = String(vv[i][refCol] || '').trim();
+    if (!vref) continue;
+    var vmar = String(vv[i][marCol] || '').trim();
+    if (vmar.toLowerCase().indexOf(vref.toLowerCase()) === -1) {
+      vs.getRange(i + 1, marCol + 1).setValue((vmar + ' ' + vref).trim());
+    }
+    vs.getRange(i + 1, refCol + 1).setValue('');
+    movidos++;
+  }
+
+  Logger.log(movidos + ' filas migradas (referencia → marca).');
+  return movidos + ' filas migradas';
 }
 
 // ─── Importación histórica (correr UNA vez desde el editor) ────────────────────

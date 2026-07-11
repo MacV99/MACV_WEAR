@@ -15,6 +15,8 @@ import { API_URL } from '../scripts/admin-config';
 
     <!-- ── PWA (instalable como app, solo el panel) ── -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- #0a0908 = --carbon-900 (project.css). El <head> y el manifest.webmanifest no
+         pueden leer variables CSS: si cambia la marca, actualizar ambos a mano. -->
     <meta name="theme-color" content="#0a0908" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -78,7 +80,23 @@ import { API_URL } from '../scripts/admin-config';
             <h2>Inventario</h2>
             <button id="btn-nuevo" class="btn-primary"><i class="bi bi-plus-lg"></i> Nuevo producto</button>
           </div>
-          <input id="inv-search" class="field search wide-search" type="search" placeholder="Buscar…" />
+          <div class="inv-toolbar">
+            <input id="inv-search" class="field search" type="search" placeholder="Buscar…" />
+            <span class="select-wrap"><select id="f-producto" class="field inv-filter" data-campo="producto" aria-label="Filtrar por producto"></select></span>
+            <span class="select-wrap"><select id="f-marca" class="field inv-filter" data-campo="marca" aria-label="Filtrar por referencia"></select></span>
+            <span class="select-wrap"><select id="f-color" class="field inv-filter" data-campo="color" aria-label="Filtrar por color"></select></span>
+            <span class="select-wrap"><select id="f-talla" class="field inv-filter" data-campo="talla" aria-label="Filtrar por talla"></select></span>
+            <span class="select-wrap inv-sort-wrap">
+              <select id="inv-sort" class="field" aria-label="Ordenar inventario">
+                <option value="avail">Disponibilidad</option>
+                <option value="marca">Referencia (A–Z)</option>
+                <option value="producto">Producto (A–Z)</option>
+                <option value="stock-desc">Más stock</option>
+                <option value="stock-asc">Menos stock</option>
+                <option value="vendidos-desc">Más vendidos</option>
+              </select>
+            </span>
+          </div>
           <div id="inv-body" class="card-list"></div>
         </section>
 
@@ -144,7 +162,19 @@ import { API_URL } from '../scripts/admin-config';
         reformat();
       }
       const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      // Clave del SKU. La referencia ya no es campo aparte: va dentro de `marca`
+      // (ej. "Calvin Klein ref3"), así distingue SKUs sin columna extra.
       const keyOf = (p) => `${p.producto}|${p.marca}|${p.color}|${p.talla}`;
+      // Producto ya existente con la misma combinación (sin distinguir mayúsculas), o undefined.
+      const existenteDe = (o) => DATA.productos.find((p) => keyOf(p).toLowerCase() === keyOf(o).toLowerCase());
+      // Imagen ya asociada a una combinación marca+color (cualquier talla). Todas las
+      // tallas de un mismo producto comparten imagen, igual que en la Tienda.
+      const norm = (s) => String(s ?? '').trim().toLowerCase();
+      const imagenDeGrupo = ({ marca, color }) => {
+        const m = DATA.productos.find((p) =>
+          norm(p.marca) === norm(marca) && norm(p.color) === norm(color) && p.imagen);
+        return m ? m.imagen : '';
+      };
       // Estado de pago de una venta: solo 'pendiente' explícito cuenta; vacío/histórico = 'pagado'.
       const estadoDe = (v) => String(v.estado || '').toLowerCase() === 'pendiente' ? 'pendiente' : 'pagado';
       const thumb = (p) => p.imagen
@@ -329,12 +359,44 @@ import { API_URL } from '../scripts/admin-config';
           const done = (val) => { root._reject = null; resolve(val); closeModal(); };
           root._reject = () => resolve(null);
           root.querySelector('[data-x]').addEventListener('click', () => done(null));
-          root.querySelector('#modal-form').addEventListener('submit', (e) => {
+
+          // Marca en rojo los campos que faltan y no cierra el modal. `names` = array
+          // de `name`s inválidos. Al escribir en un campo marcado, se limpia su aviso.
+          const form = root.querySelector('#modal-form');
+          function marcarFaltantes(names) {
+            form.querySelectorAll('.mfield.invalid').forEach((el) => {
+              el.classList.remove('invalid');
+              const m = el.querySelector('.mfield-msg'); if (m) m.remove();
+            });
+            names.forEach((n) => {
+              const input = form.querySelector(`[name="${n}"]`);
+              const field = input && input.closest('.mfield');
+              if (!field) return;
+              field.classList.add('invalid');
+              const msg = document.createElement('span');
+              msg.className = 'mfield-msg';
+              msg.textContent = 'Falta este dato';
+              field.appendChild(msg);
+              input.addEventListener('input', () => {
+                field.classList.remove('invalid');
+                const mm = field.querySelector('.mfield-msg'); if (mm) mm.remove();
+              }, { once: true });
+            });
+            const primero = form.querySelector('.mfield.invalid [name]');
+            if (primero) primero.focus();
+          }
+
+          form.addEventListener('submit', (e) => {
             e.preventDefault();
             const out = {};
             new FormData(e.target).forEach((v, k) => out[k] = v);
             // Campos de dinero: mandamos solo los dígitos, sin puntos ("30.000" → "30000").
             opts.fields.forEach((f) => { if (f.money && out[f.name] != null) out[f.name] = String(out[f.name]).replace(/\D/g, ''); });
+            // Validación opcional: si devuelve nombres faltantes, se marcan y NO se cierra.
+            if (opts.validate) {
+              const faltan = opts.validate(out) || [];
+              if (faltan.length) { marcarFaltantes(faltan); return; }
+            }
             done(out);
           });
           // Campos con combobox creable (f.combo = () => array de opciones) o de dinero.
@@ -617,13 +679,29 @@ import { API_URL } from '../scripts/admin-config';
       $('#btn-add-venta').addEventListener('click', abrirModalVenta);
 
       // ─── INVENTARIO ──────────────────────────────────────────────────────────
-      function renderInventario() {
-        const q = ($('#inv-search').value || '').toLowerCase();
-        const list = DATA.productos.filter((p) => !q || [p.producto, p.marca, p.color, p.talla].join(' ').toLowerCase().includes(q));
-        $('#inv-body').innerHTML = list.map((p) => {
-          const k = esc(keyOf(p));
-          const oos = (p.stock || 0) <= 0;
-          return `
+      // Orden base: marca → producto → color → talla (natural, para agrupar visualmente).
+      const cmpMarca = (a, b) =>
+        (a.marca || '').localeCompare(b.marca || '', 'es', { sensitivity: 'base' }) ||
+        (a.producto || '').localeCompare(b.producto || '', 'es', { sensitivity: 'base' }) ||
+        (a.color || '').localeCompare(b.color || '', 'es', { sensitivity: 'base' }) ||
+        (a.talla || '').localeCompare(b.talla || '', 'es', { sensitivity: 'base' });
+      // Ordena una copia según el modo elegido; `cmpMarca` es el desempate en todos.
+      function ordenarInv(arr, modo) {
+        const c = [...arr];
+        if (modo === 'marca')         return c.sort(cmpMarca);
+        if (modo === 'producto')      return c.sort((a, b) => (a.producto || '').localeCompare(b.producto || '', 'es', { sensitivity: 'base' }) || cmpMarca(a, b));
+        if (modo === 'stock-desc')    return c.sort((a, b) => (b.stock || 0) - (a.stock || 0) || cmpMarca(a, b));
+        if (modo === 'stock-asc')     return c.sort((a, b) => (a.stock || 0) - (b.stock || 0) || cmpMarca(a, b));
+        if (modo === 'vendidos-desc') return c.sort((a, b) => (b.vendidos || 0) - (a.vendidos || 0) || cmpMarca(a, b));
+        return c.sort(cmpMarca);
+      }
+      // Encabezado de grupo (ocupa toda la fila del grid).
+      const invGrupo = (txt, n) => `<h3 class="inv-group-head">${esc(txt)} <span class="count">${n}</span></h3>`;
+
+      function invCard(p) {
+        const k = esc(keyOf(p));
+        const oos = (p.stock || 0) <= 0;
+        return `
             <article class="inv-card${oos ? ' oos' : ''}" data-key="${k}">
               <div class="inv-thumb">${thumb(p)}</div>
               <div class="inv-main">
@@ -640,9 +718,47 @@ import { API_URL } from '../scripts/admin-config';
                 <button class="mini danger" data-act="del" title="Eliminar"><i class="bi bi-trash"></i></button>
               </div>
             </article>`;
-        }).join('') || '<p class="empty">Sin productos.</p>';
+      }
+
+      // Rellena los <select> de filtro con los valores únicos actuales del inventario,
+      // conservando lo que el usuario ya tenía elegido. Se llama en cada render.
+      const FILTRO_LABEL = { producto: 'Todos los productos', marca: 'Todas las referencias', color: 'Todos los colores', talla: 'Todas las tallas' };
+      function poblarFiltros() {
+        document.querySelectorAll('.inv-filter').forEach((sel) => {
+          const campo = sel.dataset.campo;
+          const prev = sel.value;
+          const vals = distinct(DATA.productos.map((p) => p[campo]));
+          sel.innerHTML = `<option value="">${FILTRO_LABEL[campo]}</option>`
+            + vals.map((v) => `<option value="${esc(v)}"${norm(v) === norm(prev) ? ' selected' : ''}>${esc(v)}</option>`).join('');
+        });
+      }
+
+      function renderInventario() {
+        poblarFiltros();
+        const q = ($('#inv-search').value || '').toLowerCase();
+        const modo = $('#inv-sort')?.value || 'avail';
+        const fils = [...document.querySelectorAll('.inv-filter')].map((s) => ({ campo: s.dataset.campo, val: s.value }));
+        const list = DATA.productos.filter((p) => {
+          if (q && ![p.producto, p.marca, p.color, p.talla].join(' ').toLowerCase().includes(q)) return false;
+          return fils.every((f) => !f.val || norm(p[f.campo]) === norm(f.val));   // cada filtro activo debe coincidir
+        });
+        if (!list.length) { $('#inv-body').innerHTML = '<p class="empty">Sin productos con esos filtros.</p>'; return; }
+
+        if (modo === 'avail') {
+          // Por defecto: dos grupos separados — disponibles arriba, agotados abajo.
+          const disp = ordenarInv(list.filter((p) => (p.stock || 0) > 0), 'marca');
+          const ago  = ordenarInv(list.filter((p) => (p.stock || 0) <= 0), 'marca');
+          let html = '';
+          if (disp.length) html += invGrupo('Disponibles', disp.length) + disp.map(invCard).join('');
+          if (ago.length)  html += invGrupo('Agotados', ago.length) + ago.map(invCard).join('');
+          $('#inv-body').innerHTML = html;
+        } else {
+          $('#inv-body').innerHTML = ordenarInv(list, modo).map(invCard).join('');
+        }
       }
       $('#inv-search').addEventListener('input', renderInventario);
+      $('#inv-sort').addEventListener('change', renderInventario);
+      document.querySelectorAll('.inv-filter').forEach((s) => s.addEventListener('change', renderInventario));
 
       $('#inv-body').addEventListener('click', async (e) => {
         const b = e.target.closest('button'); if (!b) return;
@@ -668,12 +784,22 @@ import { API_URL } from '../scripts/admin-config';
           const v = await modalForm({
             title: 'Editar producto', subtitle: ref, confirm: 'Guardar',
             fields: [
+              { name: 'stock', label: 'Stock disponible (corregir)', type: 'number', value: p.stock, min: '0' },
               { name: 'precio', label: 'Precio tienda (público)', money: true, value: p.precio, half: true },
               { name: 'precio_real', label: 'Precio real (lo que cobras)', money: true, value: realDe(p), half: true },
               { name: 'imagen', label: 'Imagen (URL)', type: 'text', value: p.imagen },
             ],
           });
           if (!v) return;
+          // "Stock disponible" es el conteo físico real. Como stock = stock_base + agregados − vendidos,
+          // lo convertimos a stock_base para corregir el inventario sin registrar ventas ni tocar el historial.
+          if (v.stock !== undefined) {
+            const nuevoStock = parseInt(v.stock, 10);
+            if (!Number.isNaN(nuevoStock) && nuevoStock !== (p.stock || 0)) {
+              v.stock_base = String(nuevoStock - (p.agregados || 0) + (p.vendidos || 0));
+            }
+            delete v.stock;   // el backend solo entiende stock_base, no stock directo
+          }
           await submit({ action: 'update_product', key: keyObj, fields: v }, 'Actualizado ✓');
         }
 
@@ -708,7 +834,7 @@ import { API_URL } from '../scripts/admin-config';
           title: 'Nuevo producto', confirm: 'Crear producto',
           fields: [
             { name: 'producto', label: 'Producto', combo: () => valoresProducto('producto'), placeholder: 'Boxer', half: true },
-            { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Nike', half: true },
+            { name: 'marca', label: 'Marca', combo: () => valoresProducto('marca'), placeholder: 'Calvin Klein ref3', half: true },
             { name: 'color', label: 'Color', combo: () => valoresProducto('color'), placeholder: 'Negro', half: true },
             { name: 'talla', label: 'Talla', combo: () => valoresProducto('talla'), placeholder: 'XL', half: true },
             { name: 'precio', label: 'Precio tienda (público)', money: true, placeholder: '30.000', half: true },
@@ -716,6 +842,17 @@ import { API_URL } from '../scripts/admin-config';
             { name: 'stock_inicial', label: 'Stock inicial', type: 'number', placeholder: '10' },
             { name: 'imagen', label: 'Imagen (URL)', placeholder: 'https://…' },
           ],
+          // Validación (no cierra el modal; marca lo que falte). Siempre exige los 4
+          // datos clave; si es producto NUEVO (no existe la combinación) exige precios.
+          validate: (out) => {
+            const falta = ['producto', 'marca', 'color', 'talla'].filter((n) => !String(out[n] || '').trim());
+            if (falta.length) return falta;   // primero los datos clave
+            if (!existenteDe(out)) {
+              if (!out.precio) falta.push('precio');
+              if (!out.precio_real) falta.push('precio_real');
+            }
+            return falta;
+          },
           // Autollenar precios + aviso en vivo (crea nuevo vs suma stock a uno existente).
           onReady: (form) => {
             const prodInput = form.querySelector('[name="producto"]');
@@ -750,14 +887,14 @@ import { API_URL } from '../scripts/admin-config';
               stockTexto.textContent = ver ? 'Stock inicial' : 'Unidades que llegaron';
             }
             function actualizarEstado() {
-              const vals = claveInputs.map((i) => i.value.trim());
-              if (vals.some((v) => !v)) {   // faltan datos → sin veredicto todavía
+              const [producto, marca, color, talla] = claveInputs.map((i) => i.value.trim());
+              if (![producto, marca, color, talla].every(Boolean)) {   // faltan datos → sin veredicto todavía
                 banner.hidden = true;
                 btn.textContent = 'Crear producto';
                 mostrarSoloNuevo(true);
                 return;
               }
-              const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === vals.join('|').toLowerCase());
+              const existente = existenteDe({ producto, marca, color, talla });
               banner.hidden = false;
               if (existente) {
                 banner.className = 'nuevo-estado existe';
@@ -772,29 +909,41 @@ import { API_URL } from '../scripts/admin-config';
               }
             }
 
+            // Imagen compartida por marca+color: al llenar esa combinación se autollena
+            // la imagen ya asociada (no hay que subir una por talla).
+            const marcaInput = form.querySelector('[name="marca"]');
+            const colorInput = form.querySelector('[name="color"]');
+            const imgInput = form.querySelector('[name="imagen"]');
+            const imgField = imgInput.closest('.mfield');
+            const imgLabelTxt = imgField.childNodes[0];   // nodo de texto de la etiqueta
+            let imgAuto = !imgInput.value;   // deja de autollenar en cuanto el usuario la toca a mano
+            imgInput.addEventListener('input', () => { imgAuto = false; });
+            function syncImagen() {
+              if (!imgAuto) return;
+              const compartida = imagenDeGrupo({
+                marca: marcaInput.value, color: colorInput.value,
+              });
+              imgInput.value = compartida;
+              imgInput.readOnly = !!compartida;   // heredada → solo lectura, se comparte sola
+              imgLabelTxt.textContent = compartida ? 'Imagen (compartida con las otras tallas)' : 'Imagen (URL)';
+            }
+
             claveInputs.forEach((i) => {
-              i.addEventListener('input', () => { sync(); actualizarEstado(); });
-              i.addEventListener('change', () => { sync(); actualizarEstado(); });
+              i.addEventListener('input', () => { sync(); syncImagen(); actualizarEstado(); });
+              i.addEventListener('change', () => { sync(); syncImagen(); actualizarEstado(); });
             });
+            syncImagen();
             actualizarEstado();
           },
         });
-        if (!o) return;
-        if (!o.producto || !o.marca || !o.color || !o.talla) {
-          pill('Completa producto, marca, color y talla', 'err');
-          return;
-        }
+        if (!o) return;   // cancelado (los datos ya vienen validados por el hook `validate`)
         // ¿Ya existe esta combinación producto/marca/color/talla? (sin distinguir mayúsculas)
-        const existente = DATA.productos.find((p) => keyOf(p).toLowerCase() === keyOf(o).toLowerCase());
+        const existente = existenteDe(o);
         const cant = parseInt(o.stock_inicial, 10) || 0;
         if (existente) {
           // Ya existe → solo sumamos el stock indicado, no creamos fila nueva (los precios no aplican).
           await submit({ action: 'add_stock', producto: existente.producto, marca: existente.marca, color: existente.color, talla: existente.talla, cantidad: cant }, `Ya existía — +${cant} al stock ✓`);
         } else {
-          if (!o.precio || !o.precio_real) {
-            pill('Completa el precio tienda y el precio real', 'err');
-            return;
-          }
           await submit({ action: 'add_product', ...o }, 'Producto creado ✓');
         }
       }
@@ -956,9 +1105,9 @@ import { API_URL } from '../scripts/admin-config';
         }
 
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        const botones = () => ['install-btn', 'btn-install'].map((id) => document.getElementById(id)).filter(Boolean);
-        const mostrar = () => botones().forEach((b) => (b.hidden = false));
-        const ocultar = () => botones().forEach((b) => (b.hidden = true));
+        const botones = ['install-btn', 'btn-install'].map((id) => document.getElementById(id)).filter(Boolean);
+        const mostrar = () => botones.forEach((b) => (b.hidden = false));
+        const ocultar = () => botones.forEach((b) => (b.hidden = true));
 
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -974,7 +1123,7 @@ import { API_URL } from '../scripts/admin-config';
           deferredPrompt = null;
           if (outcome === 'accepted') ocultar();
         }
-        botones().forEach((b) => b.addEventListener('click', instalar));
+        botones.forEach((b) => b.addEventListener('click', instalar));
         window.addEventListener('appinstalled', ocultar);
 
         // iOS Safari no dispara beforeinstallprompt → mostramos la pista manual.
@@ -1157,6 +1306,25 @@ import { API_URL } from '../scripts/admin-config';
       }
       .field:focus { outline: none; box-shadow: var(--focus-ring); }
       .search { max-width: 320px; }
+      /* Barra de inventario: buscador + filtros + orden en una fila que envuelve en móvil. */
+      .inv-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
+      .inv-toolbar .search { flex: 1 1 200px; max-width: none; }
+      .inv-toolbar .select-wrap { flex: 0 0 auto; }
+      .inv-toolbar select.field { width: auto; max-width: 12rem; }
+      /* En móvil los filtros se reparten 2 por fila para no apilar 6 controles. */
+      @media (max-width: 749px) {
+        .inv-toolbar .select-wrap { flex: 1 1 45%; }
+        .inv-toolbar select.field { width: 100%; max-width: none; }
+      }
+      /* Encabezado de grupo (Disponibles / Agotados): ocupa toda la fila del grid. */
+      .inv-group-head {
+        grid-column: 1 / -1; margin: 0; padding-bottom: 6px;
+        font-family: var(--font-display); font-size: .95rem; letter-spacing: .01em;
+        border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 8px;
+      }
+      .inv-group-head .count { font-size: .72rem; font-weight: 400; color: var(--fg-muted); }
+      /* El segundo grupo (Agotados) se separa un poco más del primero. */
+      .inv-group-head ~ .inv-group-head { margin-top: var(--space-3); }
 
       /* ── SELECT: quitamos la flecha nativa (va pegada al borde) y ponemos
          una propia con espacio controlado. El wrapper la dibuja con un
@@ -1223,8 +1391,8 @@ import { API_URL } from '../scripts/admin-config';
       }
       .sku-card.oos { opacity: .5; cursor: default; }
       .sku-thumb { aspect-ratio: 1 / 1; }
-      .sku-marca { font-family: var(--font-display); font-size: 1.05rem; padding: var(--space-2) var(--space-3) 0; }
-      .sku-meta { font-size: .74rem; color: var(--fg-muted); padding: 0 var(--space-3); }
+      .sku-marca { font-family: var(--font-display); font-size: 1.05rem; padding: var(--space-2) var(--space-3) 0; text-transform: uppercase; }
+      .sku-meta { font-size: .74rem; color: var(--fg-muted); padding: 0 var(--space-3); text-transform: uppercase; }
       .sku-foot { display: flex; justify-content: space-between; align-items: baseline; padding: 2px var(--space-3) var(--space-3); }
       .sku-precio { font-weight: 700; }
       .sku-stock { font-size: .72rem; color: var(--fg-muted); }
@@ -1241,13 +1409,25 @@ import { API_URL } from '../scripts/admin-config';
       .inv-thumb { width: 60px; height: 60px; }
       .inv-main { min-width: 0; }
       .inv-title { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; }
-      .inv-marca { font-family: var(--font-display); font-size: 1.1rem; }
+      .inv-marca { font-family: var(--font-display); font-size: 1.1rem; text-transform: uppercase; }
       /* "Disponibles" luce igual que "Vendidos"; solo se pinta de rojo si está agotado. */
       .inv-units.zero, .inv-units.zero b { color: var(--blood-600); }
-      .inv-sub { font-size: .76rem; color: var(--fg-muted); margin: 2px 0 6px; }
+      /* El sub SIEMPRE ocupa 2 líneas de alto (reservadas) y nunca más de 2 (clamp):
+         así una card de "GRIS CENIZO · XXL" (2 líneas) y una de "BLANCO · L" (1 línea)
+         miden igual → no se desajustan. Sin altura fija ni recortes raros. */
+      .inv-sub {
+        font-size: .76rem; color: var(--fg-muted); margin: 2px 0 6px; text-transform: uppercase;
+        line-height: 1.3; min-height: 2.6em;
+        display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+      }
+      /* Mostramos los datos de producto en MAYÚSCULAS (solo presentación; el dato en la hoja no cambia). */
+      .inv-filter, .inv-filter option { text-transform: uppercase; }
       .inv-nums { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--space-3); font-size: .74rem; color: var(--fg-muted); }
       .inv-nums b { color: var(--fg); }
-      .inv-actions { display: flex; flex-direction: column; gap: 6px; }
+      /* Botones (+ / editar / borrar) anclados arriba a la derecha, compactos para
+         no comerse el ancho de la card (dejan más sitio al texto). */
+      .inv-actions { display: flex; flex-direction: column; gap: 5px; align-self: start; }
+      .inv-actions .mini { width: 27px; height: 27px; font-size: .8rem; }
 
       .venta-card { padding: var(--space-3) var(--space-4); background: var(--bone-50); border: 1px solid var(--border); border-left: 3px solid var(--olive-600); }
       .venta-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); }
@@ -1352,6 +1532,17 @@ import { API_URL } from '../scripts/admin-config';
         box-shadow: var(--shadow-md); animation: slideUp .2s ease;
       }
       @keyframes slideUp { from { transform: translate(-50%, -46%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+      /* En móvil el modal se ancla arriba (no centrado): así el teclado, que sube
+         desde abajo, no tapa los campos ni el botón de guardar; los modales largos
+         hacen scroll interno. dvh contempla la barra del navegador móvil. */
+      @media (max-width: 749px) {
+        .modal {
+          top: var(--space-4); transform: translateX(-50%);
+          max-height: calc(100dvh - var(--space-4) * 2);
+          animation: modalUp .2s ease;
+        }
+        @keyframes modalUp { from { transform: translate(-50%, 10px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+      }
       .modal-head { padding: var(--space-5) var(--space-5) var(--space-3); }
       .modal-head h3 { font-family: var(--font-display); font-size: 1.4rem; margin: 0; }
       .modal-sub { margin: 4px 0 0; font-size: .82rem; color: var(--fg-muted); }
@@ -1364,6 +1555,9 @@ import { API_URL } from '../scripts/admin-config';
       #modal-form .mfield.half { grid-column: span 1; }   /* media fila */
       #modal-form .mfield[hidden] { display: none; }
       #modal-form .nuevo-estado { grid-column: span 2; }  /* el aviso siempre a lo ancho */
+      /* Campo que falta por llenar: borde rojo + aviso, sin cerrar el modal. */
+      #modal-form .mfield.invalid .field { border-color: var(--blood-600); box-shadow: 0 0 0 2px rgba(176,41,31,.15); }
+      #modal-form .mfield-msg { font-size: .72rem; font-weight: 600; color: var(--blood-600); }
       .modal-foot { display: flex; gap: var(--space-3); justify-content: flex-end; padding: var(--space-5); }
       .btn-ghost {
         font-family: var(--font-body); font-weight: 600; font-size: .92rem;
@@ -1378,7 +1572,7 @@ import { API_URL } from '../scripts/admin-config';
       .vitem-addbtn { padding: 0 14px; flex: 0 0 auto; }
       .vitem-list { display: flex; flex-direction: column; gap: var(--space-2); }
       .vitem { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--space-2); align-items: center; font-size: .85rem; padding: var(--space-2); background: var(--bone-100); border: 1px solid var(--border); }
-      .vitem-name { min-width: 0; }
+      .vitem-name { min-width: 0; text-transform: uppercase; }
       .vitem-sub { font-weight: 700; min-width: 64px; text-align: right; }
       .vitem-del { border: none; background: transparent; color: var(--blood-600); cursor: pointer; font-size: .9rem; }
       .qty { display: flex; align-items: center; gap: var(--space-2); }
