@@ -28,6 +28,10 @@ const { title } = Astro.props;
     </main>
     <Footer />
     <CartDrawer />
+    <!-- Indicador de sincronización con la base (Google Sheets). El JS de
+         sheet-products.ts alterna las clases; el elemento vive aquí (estático)
+         para que los estilos scoped de Astro apliquen. -->
+    <div id="sync-pill" class="sync-pill" role="status" aria-live="polite"></div>
   </body>
 </html>
 
@@ -35,4 +39,36 @@ const { title } = Astro.props;
   @view-transition {
     navigation: auto;
   }
+
+  /* ── Sync pill ── (el spinner interno usa la utilidad global .spinner) */
+  .sync-pill {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    display: flex;
+    align-items: center;
+    gap: 0.55em;
+    padding: 0.55rem 1.1rem;
+    background: var(--carbon-900);
+    color: var(--bone-50);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 300;
+  }
+
+  .sync-pill.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .sync-pill.done { background: var(--olive-600); }
+  .sync-pill.offline { background: var(--blood-600); }
 </style>

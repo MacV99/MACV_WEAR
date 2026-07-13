@@ -68,6 +68,7 @@
 
   --rgb-primary: 10, 9, 8;
   --rgb-accent:  176, 41, 31;
+  --rgb-bone-50: 251, 248, 242;   /* canales de --bone-50 → para rgba() del spinner y overlays claros */
 
   --border-soft:  var(--border);
   --border-hover: rgba(10, 9, 8, 0.4);

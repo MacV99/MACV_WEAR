@@ -277,6 +277,25 @@ a.boton,
   to   { transform: translateX(0); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Spinner reutilizable: círculo con un tramo resaltado que gira. Se dimensiona
+   en em (hereda del contenedor). Usado en los pills de sincronización. */
+.spinner {
+  width: 0.85em;
+  height: 0.85em;
+  border: 2px solid rgba(var(--rgb-bone-50), 0.3);
+  border-top-color: var(--bone-50);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}
+
 /* =============================================
    HOVER & RESPONSIVE
    ============================================= */

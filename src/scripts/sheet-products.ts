@@ -387,20 +387,77 @@ function clearFilters() {
   render();
 }
 
-// ─── shared fetch with cache ──────────────────────────────────────────────────
+// ─── localStorage cache (stale-while-revalidate) ───────────────────────────────
+// Persistimos el catálogo ya parseado para pintar al instante en la próxima visita
+// mientras refrescamos del servidor en segundo plano.
 
-export function fetchProducts(): Promise<SheetProduct[]> {
-  if (_cache) return Promise.resolve(_cache);
+const LS_KEY = 'macv_tienda_products';
+
+function readLS(): SheetProduct[] | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length ? (arr as SheetProduct[]) : null;
+  } catch { return null; }
+}
+
+function writeLS(products: SheetProduct[]): void {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(products)); } catch { /* cuota llena / modo privado */ }
+}
+
+// Devuelve lo que haya cacheado ahora mismo (memoria o localStorage), sin red.
+function getCached(): SheetProduct[] | null {
+  return _cache ?? readLS();
+}
+
+// Trae del servidor, actualiza memoria + localStorage. Coalescente entre llamadas.
+function networkFetch(): Promise<SheetProduct[]> {
   _inflight ??= fetch(SHEET_URL)
     .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
-    .then(text => { _cache = parseCSV(text); return _cache!; })
+    .then(text => { _cache = parseCSV(text); writeLS(_cache); return _cache!; })
     .finally(() => { _inflight = null; });
   return _inflight;
 }
 
+// ─── shared fetch with cache ──────────────────────────────────────────────────
+// Para grids de una sola pintada (home/drop): devuelve la caché al instante si la
+// hay y refresca en segundo plano; si no, espera a la red.
+
+export function fetchProducts(): Promise<SheetProduct[]> {
+  if (_cache) return Promise.resolve(_cache);
+  const ls = readLS();
+  const net = networkFetch();
+  return ls && ls.length ? Promise.resolve(ls) : net;
+}
+
+// ─── indicador de sincronización (pill flotante) ───────────────────────────────
+
+let _pillTimer: ReturnType<typeof setTimeout>;
+
+function syncPill(state: 'loading' | 'done' | 'offline'): void {
+  const el = document.getElementById('sync-pill');
+  if (!el) return;
+  clearTimeout(_pillTimer);
+  el.className = 'sync-pill show' + (state === 'loading' ? '' : ` ${state}`);
+  el.innerHTML =
+    state === 'loading' ? '<span class="spinner"></span>Sincronizando…'
+    : state === 'done'  ? 'Actualizado ✓'
+    :                     'Sin conexión · datos guardados';
+  if (state !== 'loading') {
+    _pillTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+}
+
 // ─── home / drop grids ────────────────────────────────────────────────────────
 
-const SK = `<div class="sk-card"><div class="sk-visual"></div><div class="sk-body"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:75%"></div></div></div>`;
+// Skeleton de card con N líneas de anchos dados, mientras carga el catálogo.
+const skCard = (widths: string[]) =>
+  `<div class="sk-card"><div class="sk-visual"></div><div class="sk-body">${
+    widths.map(w => `<div class="sk-line" style="width:${w}"></div>`).join('')
+  }</div></div>`;
+
+const SK = skCard(['55%', '75%']);
 
 async function initGrid(gridId: string, limit: number, select: (ps: SheetProduct[]) => SheetProduct[]) {
   const grid = document.getElementById(gridId);
@@ -426,37 +483,34 @@ export const initDropCards = (gridId: string, limit = 2) =>
 
 // ─── init tienda ──────────────────────────────────────────────────────────────
 
+// Marca los chips activos según el estado de filtros (se pierde al reconstruirlos).
+function markActiveChips() {
+  document.querySelectorAll<HTMLButtonElement>('.filter-chip[data-fkey]').forEach(b => {
+    const key = b.dataset.fkey as 'brand' | 'size' | 'color';
+    const val = b.dataset.fval ?? '';
+    b.classList.toggle('active', !!state.filters[key] && state.filters[key].toLowerCase() === val.toLowerCase());
+  });
+  document.getElementById('filter-stock')?.classList.toggle('active', state.filters.onlyStock);
+}
+
 export async function initSheetProducts() {
   const grid = document.getElementById('tienda-grid')!;
 
-  grid.innerHTML = Array(8).fill(`
-    <div class="sk-card">
-      <div class="sk-visual"></div>
-      <div class="sk-body">
-        <div class="sk-line" style="width:55%"></div>
-        <div class="sk-line" style="width:75%"></div>
-        <div class="sk-line" style="width:40%"></div>
-      </div>
-    </div>
-  `).join('');
-
-  try {
-    state.products = await fetchProducts();
-
-    if (state.products.length === 0) {
-      grid.innerHTML = `<p class="sheet-empty-msg">No hay productos disponibles.</p>`;
-      return;
-    }
-
-    state.grouped = groupProducts(state.products);
-
-    buildFilterGroup('filter-brand', 'brand', unique(state.products, 'marca'));
-    buildFilterGroup('filter-size',  'size',  unique(state.products, 'talla'));
-    buildFilterGroup('filter-color', 'color', unique(state.products, 'color'));
-
+  // Vuelca los productos en el estado, reconstruye filtros (conservando la
+  // selección activa) y pinta. Se usa tanto para la caché como para lo fresco.
+  const applyData = (products: SheetProduct[]) => {
+    state.products = products;
+    state.grouped = groupProducts(products);
+    buildFilterGroup('filter-brand', 'brand', unique(products, 'marca'));
+    buildFilterGroup('filter-size',  'size',  unique(products, 'talla'));
+    buildFilterGroup('filter-color', 'color', unique(products, 'color'));
+    markActiveChips();
     render();
+  };
 
-    // filter chips delegation
+  // Conecta los listeners (delegación sobre elementos estáticos → sobrevive a los
+  // re-render; se llama una sola vez tras la primera pintada).
+  const wireEvents = () => {
     document.getElementById('tienda-filters')?.addEventListener('click', e => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.filter-chip');
       if (!btn) return;
@@ -470,7 +524,6 @@ export async function initSheetProducts() {
       render();
     });
 
-    // stock toggle
     document.getElementById('filter-stock')?.addEventListener('click', function () {
       state.filters.onlyStock = !state.filters.onlyStock;
       (this as HTMLButtonElement).classList.toggle('active', state.filters.onlyStock);
@@ -478,7 +531,6 @@ export async function initSheetProducts() {
       render();
     });
 
-    // search
     let searchTimer: ReturnType<typeof setTimeout>;
     document.getElementById('tienda-search')?.addEventListener('input', e => {
       clearTimeout(searchTimer);
@@ -489,16 +541,48 @@ export async function initSheetProducts() {
       }, 280);
     });
 
-    // clear button
     document.getElementById('tienda-clear')?.addEventListener('click', clearFilters);
+  };
 
+  // 1) Pinta al instante desde la caché (si la hay); si no, muestra skeletons.
+  const cached = getCached();
+  if (cached && cached.length) {
+    applyData(cached);
+  } else {
+    grid.innerHTML = Array(8).fill(skCard(['55%', '75%', '40%'])).join('');
+  }
+  wireEvents();
+
+  // 2) Sincroniza con la base en segundo plano, mostrando el pill.
+  syncPill('loading');
+  try {
+    const fresh = await networkFetch();
+
+    if (fresh.length === 0 && !(cached && cached.length)) {
+      grid.innerHTML = `<p class="sheet-empty-msg">No hay productos disponibles.</p>`;
+      syncPill('done');
+      return;
+    }
+
+    // Solo re-render si algo cambió → evita parpadeo cuando ya estaba al día.
+    if (!cached || JSON.stringify(cached) !== JSON.stringify(fresh)) {
+      applyData(fresh);
+    }
+    syncPill('done');
   } catch (err) {
-    console.error('Error cargando catálogo:', err);
-    grid.innerHTML = `
-      <div class="sheet-empty">
-        <p>No se pudo cargar el catálogo.</p>
-        <button class="btn sm" onclick="location.reload()">Reintentar</button>
-      </div>
-    `;
+    console.error('Error sincronizando catálogo:', err);
+    if (cached && cached.length) {
+      // Tenemos datos guardados → seguimos mostrándolos, avisamos sin conexión.
+      syncPill('offline');
+    } else {
+      grid.innerHTML = `
+        <div class="sheet-empty">
+          <p>No se pudo cargar el catálogo.</p>
+          <button class="btn sm" onclick="location.reload()">Reintentar</button>
+        </div>
+      `;
+      // Error sin caché: ya mostramos el grid de error → ocultamos el pill.
+      document.getElementById('sync-pill')?.classList.remove('show');
+    }
   }
 }

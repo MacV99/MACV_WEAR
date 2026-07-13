@@ -87,22 +87,32 @@
   flex-direction: column;
   gap: 4px;
   background: var(--bone-50);
+  /* Rellena el alto sobrante cuando la fila estira las cards → sin hueco muerto abajo. */
+  flex: 1;
 }
 
 .sc-top {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .sc-name {
   font-family: var(--font-display-alt);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.2;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--carbon-900);
+  /* Reserva fija de 2 líneas y recorta a 2 máx → precio, colores y tallas
+     quedan SIEMPRE a la misma altura entre cards, sin importar el largo del nombre. */
+  min-height: 2.4em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sc-price {
@@ -154,7 +164,9 @@
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: 4px;
+  /* auto → ancla las tallas al fondo de la card; alinea la fila de tallas entre cards. */
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .sc-size {
