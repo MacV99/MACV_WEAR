@@ -153,6 +153,13 @@ function parseCSV(text: string): SheetProduct[] {
 
 export const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
+// "Talla única" no se elige: se muestra como etiqueta. Acepta variantes (UNICA, U, unitalla…).
+export function isUnica(talla: string): boolean {
+  const t = String(talla ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  return t === 'u' || t === 'unica' || t === 'unitalla' || t === 'talla unica';
+}
+export const TALLA_UNICA_LABEL = 'Talla única';
+
 export function fmtCOP(val: string): string {
   const n = parseInt(String(val).replace(/[^\d]/g, ''), 10);
   return isNaN(n) ? val : '$ ' + n.toLocaleString('es-CO');
@@ -229,9 +236,10 @@ function buildGroupedCard(gp: GroupedProduct, i: number): HTMLElement {
       const inStock = parseInt(sku.stock, 10) > 0;
       const isActive = inStock && state.filters.size &&
         sku.talla.toLowerCase() === state.filters.size.toLowerCase();
+      const unica = isUnica(sku.talla);
       const span = document.createElement('span');
-      span.className = `sc-size${!inStock ? ' oos' : ''}${isActive ? ' active' : ''}`;
-      span.textContent = sku.talla;
+      span.className = `sc-size${unica ? ' unica' : ''}${!inStock ? ' oos' : ''}${isActive ? ' active' : ''}`;
+      span.textContent = unica ? TALLA_UNICA_LABEL : sku.talla;
       if (inStock) {
         span.addEventListener('click', e => {
           e.preventDefault();

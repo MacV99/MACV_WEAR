@@ -280,6 +280,16 @@ import Layout1 from '../layouts/Layout1.astro';
 
   .size-pill.active { background: var(--carbon-900); color: var(--bone-50); }
   .size-pill.oos { opacity: 0.3; text-decoration: line-through; cursor: not-allowed; }
+  /* "Talla única": etiqueta no clicable, ancho automático para el texto largo. */
+  .size-pill.unica {
+    width: auto;
+    min-width: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: .02em;
+    cursor: default;
+  }
 
   .qty-stepper { border: 1.5px solid var(--carbon-900); gap: 0; }
 
@@ -442,7 +452,7 @@ import Layout1 from '../layouts/Layout1.astro';
 </style>
 
 <script>
-  import { fetchProducts, groupProducts, fmtCOP, SIZE_ORDER } from '../scripts/sheet-products.ts';
+  import { fetchProducts, groupProducts, fmtCOP, SIZE_ORDER, isUnica, TALLA_UNICA_LABEL } from '../scripts/sheet-products.ts';
 
   const DEFAULT_DESC = 'Diseño premium con acabados de alta calidad. Confeccionado para durar y para sentirte bien todo el día, sin compromisos.';
   const DEFAULT_MATERIAL = 'Microfibra premium';
@@ -542,6 +552,26 @@ import Layout1 from '../layouts/Layout1.astro';
 
     const colorInStock = sizesForColor.some(s => parseInt(s.stock, 10) > 0);
     oosBadge.hidden = colorInStock;
+
+    // Talla única: no se elige, se muestra como etiqueta y queda auto-seleccionada.
+    if (sizesForColor.length === 1 && isUnica(sizesForColor[0].talla)) {
+      const sku = sizesForColor[0];
+      const inStock = parseInt(sku.stock, 10) > 0;
+      const tag = document.createElement('span');
+      tag.className = `size-pill unica${!inStock ? ' oos' : ' active'}`;
+      tag.textContent = TALLA_UNICA_LABEL;
+      sizesEl.appendChild(tag);
+      if (inStock) {
+        selectedSize = sku.talla;
+        selectedMaxStock = parseInt(sku.stock, 10);
+        qtyInput.max = String(selectedMaxStock);
+        if (parseInt(qtyInput.value) > selectedMaxStock) qtyInput.value = String(selectedMaxStock);
+        updateStockMsg();
+        sizeNameEl.textContent = TALLA_UNICA_LABEL;
+      }
+      updateAddBtn();
+      return;
+    }
 
     sizesForColor.forEach(sku => {
       const inStock = parseInt(sku.stock, 10) > 0;

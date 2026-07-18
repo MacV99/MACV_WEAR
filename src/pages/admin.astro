@@ -162,6 +162,9 @@ import { API_URL } from '../scripts/admin-config';
         reformat();
       }
       const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      // Talla única: se muestra como "Talla única" (igual que en la Tienda), no como "UNICA".
+      const isUnica = (t) => { const s = String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase(); return s === 'u' || s === 'unica' || s === 'unitalla' || s === 'talla unica'; };
+      const tallaLabel = (t) => isUnica(t) ? 'Talla única' : t;
       // Clave del SKU. La referencia ya no es campo aparte: va dentro de `marca`
       // (ej. "Calvin Klein ref3"), así distingue SKUs sin columna extra.
       const keyOf = (p) => `${p.producto}|${p.marca}|${p.color}|${p.talla}`;
@@ -680,7 +683,7 @@ import { API_URL } from '../scripts/admin-config';
         const prodPicker = makeSelectCombo(root.querySelector('#v-prod'), () =>
           disponibles()
             .filter((d) => d.libre > 0)
-            .map((d) => ({ value: keyOf(d.p), label: `${d.p.producto} · ${d.p.marca} · ${d.p.color} · ${d.p.talla}` }))
+            .map((d) => ({ value: keyOf(d.p), label: `${d.p.producto} · ${d.p.marca} · ${d.p.color} · ${tallaLabel(d.p.talla)}` }))
         );
         const pintarSelect = () => prodPicker.refresh();
 
@@ -692,7 +695,7 @@ import { API_URL } from '../scripts/admin-config';
           const cobroUnit = (it) => unica ? it.precioTienda : it.precio;
           listEl.innerHTML = items.map((it, i) => `
             <div class="vitem">
-              <span class="vitem-name">${esc(it.marca)} · ${esc(it.color)} · ${esc(it.talla)}</span>
+              <span class="vitem-name">${esc(it.marca)} · ${esc(it.color)} · ${esc(tallaLabel(it.talla))}</span>
               <div class="qty">
                 <button type="button" data-act="dec" data-i="${i}">−</button>
                 <span>${it.cantidad}</span>
@@ -793,7 +796,7 @@ import { API_URL } from '../scripts/admin-config';
               <div class="inv-thumb">${thumb(p)}</div>
               <div class="inv-main">
                 <div class="inv-title"><span class="inv-marca">${esc(p.marca)}</span></div>
-                <div class="inv-sub">${esc(p.producto)} · ${esc(p.color)} · ${esc(p.talla)}</div>
+                <div class="inv-sub">${esc(p.producto)} · ${esc(p.color)} · ${esc(tallaLabel(p.talla))}</div>
                 <div class="inv-nums">
                   <span class="inv-units${oos ? ' zero' : ''}">Disponibles <b>${p.stock}</b></span>
                   <span>Vendidos <b>${p.vendidos}</b></span>
@@ -853,7 +856,7 @@ import { API_URL } from '../scripts/admin-config';
         const p = DATA.productos.find((x) => keyOf(x) === card.dataset.key);
         if (!p) return;
         const act = b.dataset.act;
-        const ref = `${p.marca} · ${p.color} · ${p.talla}`;
+        const ref = `${p.marca} · ${p.color} · ${tallaLabel(p.talla)}`;
         const keyObj = { producto: p.producto, marca: p.marca, color: p.color, talla: p.talla };
 
         if (act === 'addstock') {
@@ -1075,7 +1078,7 @@ import { API_URL } from '../scripts/admin-config';
         $('#ventas-body').innerHTML = pedidos.map((o) => {
           const pend = o.estado === 'pendiente';
           const lineas = o.lineas.map((l) =>
-            `<div class="venta-sub">${esc(l.producto)} · ${esc(l.marca)} · ${esc(l.color)} · ${esc(l.talla)} · ${l.cantidad} u</div>`).join('');
+            `<div class="venta-sub">${esc(l.producto)} · ${esc(l.marca)} · ${esc(l.color)} · ${esc(tallaLabel(l.talla))} · ${l.cantidad} u</div>`).join('');
           return `
           <article class="venta-card ${o.estado}" data-key="${esc(o.key)}">
             <div class="venta-head">
@@ -1126,7 +1129,7 @@ import { API_URL } from '../scripts/admin-config';
           c.unidades += v.cantidad || 0;
           c.compras += 1;
           if (v.fecha) c.ultima = v.fecha;   // último en el tiempo (orden cronológico)
-          const pk = `${v.marca} · ${v.color} · ${v.talla}`;
+          const pk = `${v.marca} · ${v.color} · ${tallaLabel(v.talla)}`;
           c.prods.set(pk, (c.prods.get(pk) || 0) + (v.cantidad || 0));
         });
         let lista = [...map.values()].sort((a, b) => b.total - a.total);
@@ -1159,7 +1162,7 @@ import { API_URL } from '../scripts/admin-config';
         const o = pedidosCache.find((p) => p.key === card.dataset.key);
         if (!o) return;
         const varias = o.lineas.length > 1;
-        const resumen = o.lineas.map((l) => `${l.marca} · ${l.color} · ${l.talla} · ${l.cantidad} u`).join(', ');
+        const resumen = o.lineas.map((l) => `${l.marca} · ${l.color} · ${tallaLabel(l.talla)} · ${l.cantidad} u`).join(', ');
 
         if (b.dataset.act === 'pay') {
           const ids = o.lineas.filter((l) => estadoDe(l) === 'pendiente').map((l) => l.id);
@@ -1174,7 +1177,7 @@ import { API_URL } from '../scripts/admin-config';
         if (b.dataset.act === 'edit') {
           const fields = [{ name: 'cliente', label: 'Cliente', type: 'text', value: o.cliente, combo: clientesList }];
           o.lineas.forEach((l, i) => fields.push({
-            name: 'cant_' + i, label: `${l.marca} · ${l.color} · ${l.talla}`, type: 'number', value: l.cantidad, min: '1',
+            name: 'cant_' + i, label: `${l.marca} · ${l.color} · ${tallaLabel(l.talla)}`, type: 'number', value: l.cantidad, min: '1',
           }));
           const v = await modalForm({
             title: varias ? 'Editar pedido' : 'Editar venta',
