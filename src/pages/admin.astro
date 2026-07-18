@@ -680,7 +680,7 @@ import { API_URL } from '../scripts/admin-config';
         const prodPicker = makeSelectCombo(root.querySelector('#v-prod'), () =>
           disponibles()
             .filter((d) => d.libre > 0)
-            .map((d) => ({ value: keyOf(d.p), label: `${d.p.marca} · ${d.p.color} · ${d.p.talla} (${d.libre} disp)` }))
+            .map((d) => ({ value: keyOf(d.p), label: `${d.p.producto} · ${d.p.marca} · ${d.p.color} · ${d.p.talla}` }))
         );
         const pintarSelect = () => prodPicker.refresh();
 
@@ -1075,7 +1075,7 @@ import { API_URL } from '../scripts/admin-config';
         $('#ventas-body').innerHTML = pedidos.map((o) => {
           const pend = o.estado === 'pendiente';
           const lineas = o.lineas.map((l) =>
-            `<div class="venta-sub">${esc(l.marca)} · ${esc(l.color)} · ${esc(l.talla)} · ${l.cantidad} u</div>`).join('');
+            `<div class="venta-sub">${esc(l.producto)} · ${esc(l.marca)} · ${esc(l.color)} · ${esc(l.talla)} · ${l.cantidad} u</div>`).join('');
           return `
           <article class="venta-card ${o.estado}" data-key="${esc(o.key)}">
             <div class="venta-head">
@@ -1488,7 +1488,7 @@ import { API_URL } from '../scripts/admin-config';
         display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
         padding: 9px 12px; border: none; border-bottom: 1px solid var(--border);
         background: transparent; color: var(--fg); cursor: pointer;
-        font-family: var(--font-body); font-size: .9rem;
+        font-family: var(--font-body); font-size: .8rem;
       }
       .combo-opt:last-child { border-bottom: none; }
       .combo-opt.active { background: var(--bone-200); }
@@ -1533,7 +1533,7 @@ import { API_URL } from '../scripts/admin-config';
       .sku-stock { font-size: .72rem; color: var(--fg-muted); }
 
       /* ── CARD LIST (inventario / ventas) ── */
-      .card-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); align-items: start; }
+      .card-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); align-items: stretch; }
 
       .inv-card {
         display: grid; grid-template-columns: 60px 1fr auto; gap: var(--space-3);
@@ -1564,7 +1564,9 @@ import { API_URL } from '../scripts/admin-config';
       .inv-actions { display: flex; flex-direction: column; gap: 5px; align-self: start; }
       .inv-actions .mini { width: 27px; height: 27px; font-size: .8rem; }
 
-      .venta-card { padding: var(--space-3) var(--space-4); background: var(--bone-50); border: 1px solid var(--border); border-left: 3px solid var(--olive-600); }
+      .venta-card { display: flex; flex-direction: column; padding: var(--space-3) var(--space-4); background: var(--bone-50); border: 1px solid var(--border); border-left: 3px solid var(--olive-600); }
+      /* La lista de líneas crece para empujar fecha + acciones al fondo → cards parejas. */
+      .venta-card .venta-lineas { flex: 1 1 auto; }
       .venta-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); }
       .venta-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
       .venta-cliente { font-family: var(--font-display); font-size: 1.05rem; }
